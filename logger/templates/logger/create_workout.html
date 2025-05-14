@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Workout</title>
+</head>
+<body>
+    <h1>Create Workout</h1>
+
+    <form method="get">
+        <h3>Filter by Muscle Group</h3>
+        {% for m in muscle_groups %}
+            <label>
+                <input type="checkbox" name="muscle_group" value="{{ m.id }}"
+                    {% if m.id|stringformat:"s" in selected_muscles %}checked{% endif %}>
+                    {{ m.name }}
+            </label><br>
+        {% endfor %}
+
+        <h3>Filter by Equipment</h3>
+        {% for e in equipment %}
+            <label>
+                <input type="checkbox" name="equipment" value="{{ e.id }}"
+                       {% if e.id|stringformat:"s" in selected_equipment %}checked{% endif %}>
+                {{ e.name }}
+            </label><br>
+        {% endfor %}
+
+        <br>
+        <button type="submit">Apply Filters</button>
+    </form>
+    <hr>
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="workout_name" value="{{ workout_name }}">
+
+        <label>Workout Name:</label>
+        <input type="text" name="workout_name" value="{{ workout_name }}" required>
+        <br><br>
+
+        <h3>Available Exercises</h3>
+        {% for ex in available_exercises %}
+            <input type="checkbox" name="exercise_ids" value="{{ ex.id }}"> {{ ex.name }}<br>
+        {% empty %}
+            <p>No exercises found with selected filters.</p>
+        {% endfor %}
+        <br>
+        <button type="submit" name="add_to_workout">Add Selected Exercises</button>
+        <br><br>
+
+        <h3>Saved Exercises (Not Yet Saved to DB)</h3>
+        <ul>
+            {% for ex in selected_exercises %}
+                <li>
+                    {{ ex.name }}
+                    <button type="submit" name="remove_exercise" value = "{{ ex.id }}">Remove</button>
+                </li>
+            {% empty %}
+                <p>No exercises added yet.</p>
+            {% endfor %}
+        </ul>
+
+        <button type="submit" name="save_workout">Save Workout</button>
+    </form>
+</body>
+</html>
