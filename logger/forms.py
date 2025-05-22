@@ -1,5 +1,5 @@
 from django import forms
-from .models import Exercise, Workout
+from .models import Exercise, Workout, CalorieEntry
 
 class ExerciseForm(forms.ModelForm):
     class Meta:
@@ -17,3 +17,7 @@ class WorkoutForm(forms.ModelForm):
             'exercises': forms.CheckboxSelectMultiple(),
         }
     
+class CalorieForm(forms.ModelForm):
+    class Meta:
+        model = CalorieEntry
+        fields = ['food_name', 'calories', 'protein']

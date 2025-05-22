@@ -1,0 +1,18 @@
+
+<h2>Log Calories for Today</h2>
+
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Add Entry</button>
+</form>
+
+
+<h3>Entries for {{ request.user.username }} on {{ log.date }}</h3>
+<ul>
+  {% for entry in entries %}
+    <li>{{ entry.food_name }} - {{ entry.calories }} kcal, {{ entry.protein }}g protein</li>
+  {% empty %}
+    <li>No entries yet.</li>
+  {% endfor %}
+</ul>

@@ -6,14 +6,31 @@
 <body>
     <h1>Create Workout</h1>
 
+    <script>
+        function clearMuscles() {
+            const checkboxes = document.querySelectorAll('.muscleCheckbox');
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+    </script>
+
     <form method="get">
         <h3>Filter by Muscle Group</h3>
-        {% for m in muscle_groups %}
-            <label>
-                <input type="checkbox" name="muscle_group" value="{{ m.id }}"
-                    {% if m.id|stringformat:"s" in selected_muscles %}checked{% endif %}>
-                    {{ m.name }}
-            </label><br>
+        {% for parent, children in muscle_group_map.items %}
+            <div style="margin-bottom: 12px;">
+                <label style="font-weight: bold;">
+                    <input type="checkbox" class="muscleCheckbox" name="muscle_group" value="{{ parent.id }}" 
+                        {% if parent.id|stringformat:"s" in selected_muscle_ids %}checked{% endif %}>
+                    {{ parent.name }}
+                </label><br>
+
+                    {% for sub in children %}
+                        <label style="margin-left: 20px; display: block">
+                            <input type="checkbox" class="muscleCheckbox" name="muscle_group" value="{{ sub.id }}"
+                                {% if sub.id|stringformat:"s" in selected_muscle_ids %}checked{% endif %}>
+                            {{ sub.name }}
+                        </label>
+                    {% endfor %}
+            </div>
         {% endfor %}
 
         <h3>Filter by Equipment</h3>
@@ -27,6 +44,7 @@
 
         <br>
         <button type="submit">Apply Filters</button>
+        <button type="button" onclick="clearMuscles()">Clear Muscles</button>
     </form>
     <hr>
 
