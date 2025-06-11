@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View Workouts by Date</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h2, h3 {
+            color: #fff;
+        }
+        form {
+            margin-bottom: 20px;
+        }
+        input[type="date"] {
+            padding: 6px;
+            background-color: #222;
+            border: 1px solid #444;
+            color: #f0f0f0;
+        }
+        button {
+            padding: 6px 12px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        ul {
+            list-style-type: square;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        .no-workouts {
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <h2>View Meals and Workouts by Date</h2>
+
+    <form method="get" style="margin-bottom: 20px;">
+        <label for="date">Select Date:</label>
+        <input type="date" id="date" name="date" value="{{ selected_date }}">
+        <button type="submit">View</button>
+    </form>
+
+    <h2>Meals Logged on {{ selected_date }}</h2>
+
+    {% if meals %}
+        <ul>
+            {% for meal in meals %}
+                <li>
+                    <strong>{{ meal.name }}</strong> — {{ meal.calories }} Cal, {{ meal.protein }}g protein
+                    <span class="actions">
+                        <form method="get" action="{% url 'edit_meal_log' meal.id %}" style="display:inline;">
+                            <button type="submit">Edit</button>
+                        </form>
+                        <form method="post" action="{% url 'delete_meal_log' meal.id %}" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" onclick="return confirm('Delete this meal?')">Delete</button>
+                        </form>
+                    </span>
+                </li>
+            {% endfor %}
+        </ul>
+        <p><strong>Total Calories:</strong> {{ total_calories }}</p>
+        <p><strong>Total Protein:</strong> {{ total_protein }}</p>
+    {% else %}
+        <p>No meals logged for this date.</p>
+    {% endif %}
+
+    <hr>
+
+    <h2>Workouts on {{ selected_date }}</h2>
+
+    {% if workouts %}
+        {% for workout in workouts %}
+            <div class="workout">
+                <h3>{{ workout.name }}</h3>
+                <ul>
+                    {% for exercise in workout.exercises.all %}
+                        <li>{{ exercise.name }}</li>
+                    {% endfor %}
+                </ul>
+                <form method="get" action="{% url 'edit_workout' workout.id %}" style="display:inline;">
+                    <button type="submit">Edit</button>
+                </form>
+                <form method="post" action="{% url 'delete_workout' workout.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" onclick="return confirm('Are you sure you want to delete this workout?')">Delete</button>
+                </form>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No workouts found for this date.</p>
+    {% endif %}
+</body>
+</html>

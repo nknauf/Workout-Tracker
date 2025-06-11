@@ -2,13 +2,78 @@
 <html>
 <head>
     <title>Workout Tracker Home</title>
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            padding: 60px 20px;
+        }
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        h2 {
+            margin-top: 40px;
+        }
+        p, a {
+            font-size: 1.2em;
+        }
+        a {
+            color: #f0f0f0;
+            background-color: #222;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px;
+            transition: 0.3s ease;
+        }
+        a:hover {
+            background-color: #444;
+        }
+        .hero {
+            background-image: url("https://images.unsplash.com/photo-1605296867304-46d5465a13f1");
+            background-size: cover;
+            background-position: center;
+            height: 400px;
+            position: relative;
+        }
+        .hero::after {
+            content: "";
+            background-color: rgba(0, 0, 0, 0.6);
+            position: absolute;
+            inset: 0;
+        }
+        .hero h1 {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            color: white;
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome to Workout Tracker</h1>
-    <p>This is your personal fitness log.</p>
+    <div class="hero">
+        <h1>Welcome to Workout Tracker</h1>
+    </div>
 
-    <p><a href="{% url 'create_exercise' %}">Add a New Exercise</a></p>
-    <br>
-    <p><a href="{% url 'create_workout' %}"> Add a New Workout</a></p>
+    <div class="container">
+        <h2>Today’s Nutrition Summary</h2>
+        <p><strong>Total Calories:</strong> {{ total_calories }} Cal</p>
+        <p><strong>Total Protein:</strong> {{ total_protein }} g protein</p>
+
+        <h2>What would you like to do?</h2>
+        <a href="{% url 'select_existing_workout' %}">Log Workout</a>
+        <a href="{% url 'select_existing_meal' %}">Log Meal</a>
+        <a href="{% url 'calendar' %}">View Calendar</a>
+    </div>
 </body>
 </html>

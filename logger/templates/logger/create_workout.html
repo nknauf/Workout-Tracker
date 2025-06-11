@@ -2,76 +2,138 @@
 <html>
 <head>
     <title>Create Workout</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #f5f5f5;
+            font-family: Arial, sans-serif;
+            padding: 40px;
+        }
+        h1, h3 {
+            text-align: center;
+        }
+        form {
+            max-width: 800px;
+            margin: auto;
+            background: #1e1e1e;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 0 10px rgba(255,255,255,0.05);
+        }
+        label {
+            display: block;
+            margin: 8px 0;
+        }
+        input[type="text"], input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 16px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 6px;
+            color: white;
+        }
+        button {
+            padding: 10px 16px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        .checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .checkboxes label {
+            margin-right: 20px;
+        }
+        ul {
+            list-style-type: square;
+        }
+    </style>
 </head>
 <body>
-    <h1>Create Workout</h1>
+    <h1>Create Your Workout</h1>
 
     <script>
-        function clearMuscles() {
-            const checkboxes = document.querySelectorAll('.muscleCheckbox');
-            checkboxes.forEach(cb => cb.checked = false);
-        }
+    function syncName() {
+      const txt = document.getElementById('workoutNameInput').value;
+      document.getElementById('filterWorkoutName').value = txt;
+      document.getElementById('postWorkoutName').value   = txt;
+    }
     </script>
 
     <form method="get">
-        <h3>Filter by Muscle Group</h3>
-        {% for parent, children in muscle_group_map.items %}
-            <div style="margin-bottom: 12px;">
-                <label style="font-weight: bold;">
-                    <input type="checkbox" class="muscleCheckbox" name="muscle_group" value="{{ parent.id }}" 
-                        {% if parent.id|stringformat:"s" in selected_muscle_ids %}checked{% endif %}>
-                    {{ parent.name }}
-                </label><br>
 
-                    {% for sub in children %}
-                        <label style="margin-left: 20px; display: block">
-                            <input type="checkbox" class="muscleCheckbox" name="muscle_group" value="{{ sub.id }}"
-                                {% if sub.id|stringformat:"s" in selected_muscle_ids %}checked{% endif %}>
-                            {{ sub.name }}
-                        </label>
-                    {% endfor %}
-            </div>
-        {% endfor %}
+        <label><strong>Workout Name:</strong></label>
+        <input
+            type="text" id="workoutNameInput" name="workout_name"
+            oninput="syncName()" placeholder="Enter workout nam" value="{{ workout_name}}" required>
+
+        <h3>Filter by Muscle Group</h3>
+        <div class="checkboxes">
+            {% for mg in muscle_groups %}
+                <label>
+                    <input type="checkbox" name="muscle_group" value="{{ mg.id }}"
+                           {% if mg.id|stringformat:"s" in selected_muscle_ids %}checked{% endif %}>
+                    {{ mg.name }}
+                </label>
+            {% endfor %}
+        </div>
 
         <h3>Filter by Equipment</h3>
-        {% for e in equipment %}
-            <label>
-                <input type="checkbox" name="equipment" value="{{ e.id }}"
-                       {% if e.id|stringformat:"s" in selected_equipment %}checked{% endif %}>
-                {{ e.name }}
-            </label><br>
-        {% endfor %}
+        <div class="checkboxes">
+            {% for eq in equipment %}
+                <label>
+                    <input type="checkbox" name="equipment" value="{{ eq.id }}"
+                           {% if eq.id|stringformat:"s" in selected_equipment %}checked{% endif %}>
+                    {{ eq.name }}
+                </label>
+            {% endfor %}
+        </div>
 
-        <br>
+        <h3>Filter by Movement Type</h3>
+        <div class="checkboxes">
+            {% for mt in movement_types %}
+                <label>
+                    <input type="checkbox" name="movement_type" value="{{ mt.id }}"
+                           {% if mt.id|stringformat:"s" in selected_movement_types %}checked{% endif %}>
+                    {{ mt.name }}
+                </label>
+            {% endfor %}
+        </div>
+
         <button type="submit">Apply Filters</button>
-        <button type="button" onclick="clearMuscles()">Clear Muscles</button>
     </form>
+
     <hr>
 
     <form method="post">
         {% csrf_token %}
-        <input type="hidden" name="workout_name" value="{{ workout_name }}">
-
-        <label>Workout Name:</label>
-        <input type="text" name="workout_name" value="{{ workout_name }}" required>
-        <br><br>
-
+        <input type="hidden" id="postWorkoutName" name="workout_name" value="{{ workout_name }}">
+        <br>
         <h3>Available Exercises</h3>
         {% for ex in available_exercises %}
-            <input type="checkbox" name="exercise_ids" value="{{ ex.id }}"> {{ ex.name }}<br>
+            <label>
+                <input type="checkbox" name="exercise_ids" value="{{ ex.id }}"> {{ ex.name }}
+            </label>
         {% empty %}
-            <p>No exercises found with selected filters.</p>
+            <p>No exercises found. Try adjusting your filters.</p>
         {% endfor %}
-        <br>
         <button type="submit" name="add_to_workout">Add Selected Exercises</button>
-        <br><br>
 
-        <h3>Saved Exercises (Not Yet Saved to DB)</h3>
+        <h3>Current Workout Exercises</h3>
         <ul>
             {% for ex in selected_exercises %}
                 <li>
                     {{ ex.name }}
-                    <button type="submit" name="remove_exercise" value = "{{ ex.id }}">Remove</button>
+                    <button type="submit" name="remove_exercise" value="{{ ex.id }}">Remove</button>
                 </li>
             {% empty %}
                 <p>No exercises added yet.</p>

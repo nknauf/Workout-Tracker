@@ -1,18 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Log Calories</title>
+    <style>
+        body {
+            background-color: #111;
+            color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        form {
+            max-width: 400px;
+            margin: auto;
+            margin-bottom: 30px;
+        }
+        label, input, button {
+            display: block;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        input, button {
+            padding: 8px;
+            background-color: #222;
+            color: white;
+            border: 1px solid #444;
+        }
+        button:hover {
+            background-color: #333;
+        }
+        h2, h3 {
+            text-align: center;
+        }
+        ul {
+            max-width: 500px;
+            margin: auto;
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 16px;
+        }
+        .inline-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 6px;
+        }
+        .inline-buttons form {
+            margin: 0;
+        }
+        .inline-buttons button {
+            width: auto;
+            font-size: 0.9em;
+            padding: 6px 12px;
+        }
+    </style>
+</head>
+<body>
 
-<h2>Log Calories for Today</h2>
+    <h2>Log Calories for Today</h2>
 
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Add Entry</button>
-</form>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Add Entry</button>
+    </form>
 
+    <h3>Entries for {{ request.user.username }} on {{ log.date }}</h3>
+    <ul>
+        {% for entry in entries %}
+            <li>
+                {{ entry.name }} - {{ entry.calories }} Cal, {{ entry.protein }}g protein
+                <div class="inline-buttons">
+                    <form method="get" action="{% url 'edit_meal_log' entry.id %}">
+                        <button type="submit">Edit</button>
+                    </form>
+                    <form method="post" action="{% url 'delete_meal_log' entry.id %}">
+                        {% csrf_token %}
+                        <button type="submit" onclick="return confirm('Delete this meal log?')">Delete</button>
+                    </form>
+                </div>
+            </li>
+        {% empty %}
+            <li>No entries yet.</li>
+        {% endfor %}
+    </ul>
 
-<h3>Entries for {{ request.user.username }} on {{ log.date }}</h3>
-<ul>
-  {% for entry in entries %}
-    <li>{{ entry.food_name }} - {{ entry.calories }} kcal, {{ entry.protein }}g protein</li>
-  {% empty %}
-    <li>No entries yet.</li>
-  {% endfor %}
-</ul>
+</body>
+</html>
