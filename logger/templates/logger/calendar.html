@@ -86,11 +86,7 @@
         {% for workout in workouts %}
             <div class="workout">
                 <h3>{{ workout.name }}</h3>
-                <ul>
-                    {% for exercise in workout.exercises.all %}
-                        <li>{{ exercise.name }}</li>
-                    {% endfor %}
-                </ul>
+                <!-- You may want to list exercises here if available -->
                 <form method="get" action="{% url 'edit_workout' workout.id %}" style="display:inline;">
                     <button type="submit">Edit</button>
                 </form>

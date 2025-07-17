@@ -28,8 +28,7 @@
 <body>
     <h1>Log a Meal</h1>
     <p>Would you like to create a new meal or log an existing one?</p>
-
-    <a href="{% url 'log_calories' %}" class="button">Create New Meal</a>
+    <a href="{% url 'log_meal_entry' %}" class="button">Create New Meal</a>
     {% if meals %}
         <h3>Or Select an Existing Meal</h3>
         <ul>

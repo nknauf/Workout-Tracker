@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversational Input - Workout Tracker</title>
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .conversational-input {
+            width: 100%;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #444;
+            background-color: #222;
+            color: #f0f0f0;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+        
+        .conversational-input:focus {
+            outline: none;
+            border-color: #007acc;
+            box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.2);
+        }
+        
+        .input-type-select {
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #333;
+            color: #f0f0f0;
+            border: 1px solid #555;
+            font-size: 16px;
+            width: 200px;
+        }
+        
+        .submit-btn {
+            background: linear-gradient(135deg, #007acc, #005a9e);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .submit-btn:hover {
+            background: linear-gradient(135deg, #005a9e, #004080);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 122, 204, 0.3);
+        }
+        
+        .examples {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .examples h3 {
+            color: #007acc;
+            margin-top: 0;
+        }
+        
+        .example-item {
+            background-color: #333;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 4px solid #007acc;
+        }
+        
+        .example-item strong {
+            color: #007acc;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #007acc;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+        
+        .back-link:hover {
+            color: #005a9e;
+        }
+        
+        .confidence-indicator {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #2a2a2a;
+            border-left: 4px solid #007acc;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #444;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ffaa00, #44ff44);
+            transition: width 0.3s ease;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .conversational-input {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'home' %}" class="back-link">← Back to Home</a>
+        
+        <h1>💬 Conversational Input</h1>
+        <p style="text-align: center; color: #ccc; margin-bottom: 30px;">
+            Describe your workout or meal in natural language and let AI parse it for you!
+        </p>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="{{ form.input_type.id_for_label }}">Input Type:</label>
+                {{ form.input_type }}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.input_text.id_for_label }}">Describe your activity:</label>
+                {{ form.input_text }}
+            </div>
+            
+            <button type="submit" class="submit-btn">
+                🚀 Parse & Continue
+            </button>
+        </form>
+        
+        <div class="examples">
+            <h3>💡 Examples</h3>
+            
+            <div class="example-item">
+                <strong>Workout Examples:</strong><br>
+                • "I did 3 sets of 10 reps bench press and 5 sets of 5 deadlifts at 225 lbs"<br>
+                • "30 minutes of running followed by 20 pushups and 15 pullups"<br>
+                • "Upper body workout: 4x12 bicep curls, 3x10 shoulder press, 2x8 pullups"
+            </div>
+            
+            <div class="example-item">
+                <strong>Meal Examples:</strong><br>
+                • "I ate chicken breast with 250 calories and 35g protein, plus a protein shake"<br>
+                • "Breakfast: oatmeal with 150 calories, banana with 100 calories, 2g protein"<br>
+                • "Lunch: salad with 300 calories and 15g protein, apple with 80 calories"
+            </div>
+            
+            <div class="example-item">
+                <strong>Tips:</strong><br>
+                • Include numbers for sets, reps, weights, calories, and protein<br>
+                • Be specific about exercise names and food items<br>
+                • You can edit the parsed data before saving
+            </div>
+        </div>
+        
+        {% if messages %}
+            <div style="margin-top: 20px;">
+                {% for message in messages %}
+                    <div style="padding: 12px; border-radius: 6px; margin-bottom: 10px; background-color: {% if message.tags == 'error' %}#ff4444{% elif message.tags == 'warning' %}#ffaa00{% else %}#44ff44{% endif %}; color: white;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+    
+    <script>
+        // Auto-resize textarea
+        const textarea = document.querySelector('.conversational-input');
+        if (textarea) {
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 300) + 'px';
+            });
+        }
+        
+        // Auto-detect input type based on content
+        textarea.addEventListener('input', function() {
+            const text = this.value.toLowerCase();
+            const select = document.querySelector('.input-type-select');
+            
+            if (text.includes('workout') || text.includes('exercise') || text.includes('reps') || 
+                text.includes('sets') || text.includes('lift') || text.includes('run') || 
+                text.includes('pushup') || text.includes('squat')) {
+                select.value = 'workout';
+            } else if (text.includes('ate') || text.includes('eat') || text.includes('food') || 
+                       text.includes('meal') || text.includes('calories') || text.includes('protein') ||
+                       text.includes('breakfast') || text.includes('lunch') || text.includes('dinner')) {
+                select.value = 'meal';
+            } else {
+                select.value = 'auto';
+            }
+        });
+    </script>
+</body>
+</html> 

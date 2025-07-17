@@ -1,0 +1,105 @@
+# Multi-Turn Slot-Filling Dialogue NLP System Requirements
+# ========================================================
+
+# Core NLP and ML libraries
+transformers>=4.30.0
+torch>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# For intent classification
+sentence-transformers>=2.2.0
+
+# For token classification and NER
+tokenizers>=0.13.0
+
+# For dialogue state management
+dataclasses-json>=0.5.0
+
+# For data processing and validation
+pydantic>=2.0.0
+typing-extensions>=4.5.0
+
+# For model training and evaluation
+datasets>=2.12.0
+evaluate>=0.4.0
+accelerate>=0.20.0
+
+# For web interface (if needed)
+flask>=2.3.0
+flask-cors>=4.0.0
+
+# For testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
+# For development
+jupyter>=1.0.0
+ipython>=8.14.0
+
+# Optional: For GPU acceleration
+# cupy-cuda11x>=12.0.0  # Uncomment if using CUDA 11.x
+# cupy-cuda12x>=12.0.0  # Uncomment if using CUDA 12.x
+
+# Optional: For advanced features
+# spacy>=3.6.0  # For additional NLP features
+# nltk>=3.8.0   # For text preprocessing
+# gensim>=4.3.0 # For word embeddings
+
+# Django integration (already in your project)
+# django>=4.2.0
+
+# Model-specific requirements
+# ==========================
+
+# For facebook/bart-large-mnli (Intent Classification)
+# No additional requirements beyond transformers
+
+# For FacebookAI/roberta-large (Token Classification)  
+# No additional requirements beyond transformers
+
+# For deepset/roberta-base-squad2 (Question Answering)
+# No additional requirements beyond transformers
+
+# Installation Instructions
+# ========================
+
+# 1. Install base requirements:
+# pip install -r requirements_multi_turn_nlp.txt
+
+# 2. For GPU support (if available):
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# 3. For development:
+# pip install -r requirements_multi_turn_nlp.txt[dev]
+
+# Model Download Instructions
+# ==========================
+
+# The models will be automatically downloaded on first use:
+# - facebook/bart-large-mnli (~1.6GB)
+# - FacebookAI/roberta-large (~1.5GB)  
+# - deepset/roberta-base-squad2 (~500MB)
+
+# Total disk space required: ~3.6GB for models + dependencies
+
+# Performance Notes
+# ================
+
+# CPU-only setup:
+# - Intent classification: ~2-3 seconds per request
+# - Token classification: ~1-2 seconds per request
+# - Memory usage: ~4-6GB RAM
+
+# GPU setup (recommended):
+# - Intent classification: ~0.5-1 second per request
+# - Token classification: ~0.2-0.5 seconds per request
+# - Memory usage: ~6-8GB RAM + GPU memory
+
+# Minimum System Requirements
+# ==========================
+
+# CPU: 4+ cores, 8GB RAM
+# GPU: NVIDIA GPU with 4GB+ VRAM (optional but recommended)
+# Storage: 10GB free space for models and dependencies
+# OS: Windows 10+, macOS 10.15+, or Linux 

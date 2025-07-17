@@ -1,290 +1,329 @@
-from logger.models import MuscleGroup, Equipment, Exercise, MovementType, BaseExercise
 from django.db import transaction
+from .models import BaseMuscle, Muscle, Equipment, BaseExercise, Exercise
 
 @transaction.atomic
 def run():
-    # Major muscle groups and children
-    structure = {
-        "Biceps": [],
-        "Triceps": [],
-        "Chest": ["Upper Chest", "Middle Chest", "Lower Chest"],
-        "Back": ["Upper Back", "Lats", "Lower Back"],
-        "Shoulders": ["Front Delt", "Side Delt", "Rear Delt"],
-        "Legs": ["Quads", "Hamstrings", "Glutes", "Adductors", "Calves"],
-        "Core": [],
-        "Forearms": []
-    }
+    # 1. Create BaseMuscle & Muscles
+    base_muscles_data = [
+        {"name": "Chest", "muscles": ["UpperChest", "MidChest", "LowerChest"]},
+        {"name": "Back", "muscles": ["UpperBack", "MidBack", "LowerBack", "Lats", "Traps"]},
+        {"name": "Shoulders", "muscles": ["FrontDelt", "SideDelt", "RearDelt"]},
+        {"name": "Arms", "muscles": ["Biceps", "Triceps", "Forearms"]},
+        {"name": "Legs", "muscles": ["Quads", "Hamstrings", "Glutes", "Calves", "Adductors", "Abductors"]},
+        {"name": "Core", "muscles": ["Abs", "Obliques", "LowerBack"]},
+    ]
 
-    muscle_group_objs = {}
-    for parent_name, children in structure.items():
-        parent = MuscleGroup.objects.create(name=parent_name)
-        muscle_group_objs[parent_name] = parent
-        for child in children:
-            subgroup = MuscleGroup.objects.create(name=child, parent=parent)
-            muscle_group_objs[child] = subgroup
-
+    muscle_objs = {}
     
-    equipment_list = ["Barbell", "Smith", "Machine", "Cable", "Dumbbell", "Bodyweight", "Bench", "EZ Bar"]
-    equipment_objs = {name: Equipment.objects.create(name=name) for name in equipment_list}
+    for base_muscle_data in base_muscles_data:
+        base_muscle = BaseMuscle.objects.create(name=base_muscle_data["name"])
+        for muscle_name in base_muscle_data["muscles"]:
+            muscle = Muscle.objects.create(name=muscle_name, base_muscle=base_muscle)
+            muscle_objs[muscle_name] = muscle
+    
+    print("Created base muscles and muscles successfully!")
 
+    # 2. Create Equipment
+    equipment_data = [
+        "Barbell", "Dumbbell", "Cable", "Machine", "Smith", "EZBar", "Bench", "Bodyweight"
+    ]
+    
+    equipment_objs = {}
+    for equipment_name in equipment_data:
+        equipment = Equipment.objects.create(name=equipment_name)
+        equipment_objs[equipment_name] = equipment
+    
+    print("Created equipment successfully!")
 
-    movement_types_list = ["push", "pull", "compound", "isolation"]
-    movement_type_objs = {name: MovementType.objects.create(name=name) for name in movement_types_list}
-
-
-
-    # Single arm low to high cable fly
-    # Incline push ups 
-
-    # Define exercises (add movement_type)
+    # 3. Create BaseExercise objects (templates for users to create their own exercises)
     exercises = [
         # Chest
-        # Incline Barbell Bench Press
-        {"base": "Incline Barbell Bench Press" ,"name": "Incline Barbell Bench Press", "description": "Incline Barbell Bench Press", "muscle": ["Chest", "Upper Chest"], "equipment": ["Barbell", "Bench"], "movement_type" : ["compound", "push"]},
-        {"base": "Incline Barbell Bench Press" ,"name": "Wide Grip Incline Barbell Bench Press", "description": "Wide Grip Incline Barbell Bench Press", "muscle": ["Chest", "Upper Chest"], "equipment": ["Barbell", "Bench"], "movement_type" : ["compound", "push"], "grip_type": "wide grip", "form_note": "Focuses more outside chest muscles"},
-        {"base": "Incline Barbell Bench Press" ,"name": "Close Grip Incline Barbell Bench Press", "description": "Close Grip Incline Barbell Bench Press", "muscle": ["Chest", "Upper Chest", "Triceps"], "equipment": ["Barbell", "Bench"], "movement_type": ["compound", "push"], "grip_type": "close grip", "form_note": "Implements triceps among the upper chest"},
-        # Incline Smith Bench Press
-        {"base": "Incline Smith Bench Press" ,"name": "Incline Smith Bench Press", "description": "Incline Smith Bench Press", "muscle": ["Chest", "Upper Chest"], "equipment": ["Smith", "Bench"], "movement_type": ["isolation", "push"]},
-        {"base": "Incline Smith Bench Press" ,"name": "Wide Grip Incline Smith Bench Press", "description": " Wide Grip Incline Smith Bench Press", "muscle": ["Chest", "Upper Chest"], "equipment": ["Smith", "Bench"], "movement_type": ["isolation", "push"], "grip_type": "wide grip", "form_note": "Focuses mroe outside chest muscles"},
-        {"base": "Incline Smith Bench Press" ,"name": "Close Grip Incline Smith Bench Press", "description": "Close Grip Incline Smith Bench Press", "muscle": ["Chest", "Upper Chest", "Triceps"], "equipment": ["Smith", "Bench"], "movement_type": ["isolation", "push"], "grip_type": "close grip", "form_note": "Implements triceps among the upper chest"},
-        # Incline Dumbbell Bench Press
-        {"base": "Incline Dumbbell Bench Press" ,"name": "Incline Dumbbell Bench Press", "description": "Incline Dumbbell Bench Press", "muscle": ["Chest", "Upper Chest"], "equipment": ["Dumbbell", "Bench"], "movement_type": ["compound", "push"]},
-        # Incline plate-loaded press
-        {"base": "Incline Plate Loaded Bench Press" ,"name": "Incline Plate Loaded Bench Press", "description": "Incline Plate Loaded Bench Press", "muscle": ["Chest", "Upper Chest"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # Low to High Cable Flys
-        {"base": "Low to High Cable Flys" ,"name": "Low to High Cable Flys", "description": "Low to High Cable Flys", "muscle": ["Chest", "Upper Chest"], "equipment": ["Cable"], "movement_type": ["compound", "push"]},
-        {"base": "Low to High Cable Flys" ,"name": "Single Arm Low to High Cable Flys", "description": "Single Arm Low to High Cable Flys", "muscle": ["Chest", "Upper Chest"], "equipment": ["Cable"], "movement_type": ["compound", "push"], "is_single_arm": True},
-        # low to high incline cable chest press
-        {"base": "Low to High Cable Chest Press", "name": "Low to High Cable Chest Press", "description": "Low to High Cable Chest Press", "muscle": ["Chest", "Upper Chest"], "equipment": ["Bench", "Cable"], "movement_type": ["isolation", "push"]},
-        {"base": "Low to High Cable Chest Press", "name": "Single Arm Low to High Cable Chest Press", "description": "Low to High Cable Chest Press", "muscle": ["Chest", "Upper Chest"], "equipment": ["Bench", "Cable"], "is_single_arm": True},
-        # regular push ups and decline push ups
-        {"base": "Pushup", "name":"Pushup","description": "Pushup", "muscle": ["Chest"], "equipment": ["Bodyweight"]},
-        {"base": "Pushup", "name":"Decline Pushup","description": "Decline Pushup", "muscle": ["Chest", "Upper Chest"], "equipment": ["Bodyweight"], "form_note": "Elevated feet gets more weight and upper chest involved"},
-        # barbell bench press
-        {"base": "Barbell Bench Press", "name": "Barbell Bench Press", "description":"Barbell Bench Press", "muscle": ["Chest", "Middle Chest"], "equipment": ["Bench", "Barbell"], "movement_type": ["compound", "push"]},
-        {"base": "Barbell Bench Press", "name": "Wide Grip Barbell Bench Press", "description":"Wide Grip Barbell Bench Press", "muscle": ["Chest", "Middle Chest"], "equipment": ["Bench", "Barbell"], "movement_type": ["compound", "push"], "grip_type": "wide grip", "form_note": "Wide grip targets outer chest muscles"},
-        # smith bench press
-        {"base": "Smith Bench Press", "name": "Smith Bench Press", "description": "Smith Bench Press", "muscle": ["Chest", "Middle Chest"], "equipment": ["Bench", "Smith"], "movement_type": ["isolation", "push"]},
-        {"base": "Smith Bench Press", "name": "Wide Grip Smith Bench Press", "description":"Wide Grip Smith Bench Press", "muscle": ["Chest", "Middle Chest"], "equipment": ["Bench", "Smith"], "movement_type": ["isolation", "push"], "grip_type": "wide grip", "form_note": "Wide grip targets outer chest muscles"},
-        # machine chest press
-        {"base": "Machine Chest Press", "name": "Machine Chest Press", "description": "Machine Chest Press", "muscle":["Chest", "Middle Chest"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # flat machine plate loaded chest press
-        {"base": "Machine Chest Press", "name": "Flat Bench Plate Loaded Chest Press", "description": "Flat Bench Plate Loaded Chest Press", "muscle": ["Chest", "Middle Chest"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # incline plate loaded chest press
-        {"base": "Machine Chest Press", "name": "Incline Plate Loaded Chest Press", "description": "Incline Plate Loaded Chest Press", "description": "Incline Plate Loaded Chest Press", "muscle": ["Chest", "Upper Chest"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # pec dec
-        {"base": "Pec Dec Fly", "name": "Pec Dec Fly", "description": "Pec Dec Fly", "muscle": ["Chest", "Middle Chest"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # decline barbell bench press
-        {"base": "Decline Barbell Bench Press", "name": "Decline Barbell Bench Press", "description": "Decline Barbell Bench Press", "muscle": ["Chest", "Lower Chest"], "equipment": ["Barbell", "Bench"], "movement_type": ["compound", "push"]},
-        {"base": "Decline Barbell Bench Press", "name": "Wide Grip Decline Barbell Bench Press", "description": "Wide Grip Decline Barbell Bench Press", "muscle": ["Chest", "Lower Chest"], "equipment": ["Barbell", "Bench"], "movement_type": ["compound", "push"], "grip_type": "wide grip", "form_note": "Wide grip targets outer chest muscles"},
-        # decline smith bench press
-        {"base": "Decline Smith Bench Press", "name": "Decline Smith Bench Press", "description": "Decline Smith Bench Press", "muscle": ["Chest", "Lower Chest"], "equipment": ["Smith", "Bench"], "movement_type": ["isolation", "push"]},
-        {"base": "Decline Smith Bench Press", "name": "Wide Grip Decline Smith Bench Press", "description": "Wide Grip Decline Smith Bench Press", "muscle": ["Chest", "Lower Chest"], "equipment": ["Smith", "Bench"], "movement_type": ["isolation", "push"], "grip_type": "wide grip", "form_note": "Wide grip targets outer chest muscles"},
-        # decline machine chest press
-        {"base": "Decline Machine Chest Press", "name": "Decline Machine Chest Press", "description": "Decline Machine Chest Press", "muscle": ["Chest", "Lower Chest"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
+        {"base_name": "Bench Press", "name": "Barbell Bench Press", "muscles": ["MidChest"], "equipment": ["Barbell", "Bench"], "notes": ""},
+        {"base_name": "Bench Press", "name": "Dumbbell Bench Press", "muscles": ["MidChest"], "equipment": ["Dumbbell", "Bench"], "notes": ""},
+        {"base_name": "Bench Press", "name": "Smith Machine Bench Press", "muscles": ["MidChest"], "equipment": ["Smith", "Bench"], "notes": ""},
+        {"base_name": "Bench Press", "name": "PlateLoaded Bench Press", "muscles": ["MidChest"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Bench Press", "name": "PinLoaded Bench Press", "muscles": ["MidChest"], "equipment": ["Machine"], "notes": ""},
+
+        {"base_name": "Incline Press", "name": "Barbell Incline Press", "muscles": ["UpperChest"], "equipment": ["Barbell", "Bench"], "notes": ""},
+        {"base_name": "Incline Press", "name": "Dumbbell Incline Press", "muscles": ["UpperChest"], "equipment": ["Dumbbell", "Bench"], "notes": ""},
+        {"base_name": "Incline Press", "name": "Smith Machine Incline Press", "muscles": ["UpperChest"], "equipment": ["Smith", "Bench"], "notes": ""},
+        {"base_name": "Incline Press", "name": "PlateLoaded Incline Press", "muscles": ["UpperChest"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Incline Press", "name": "PinLoaded Incline Press", "muscles": ["UpperChest"], "equipment": ["Machine"], "notes": ""},
+
+        {"base_name": "Decline Press", "name": "Barbell Decline Press", "muscles": ["LowerChest"], "equipment": ["Barbell", "Bench"], "notes": ""},
+        {"base_name": "Decline Press", "name": "Dumbbell Decline Press", "muscles": ["LowerChest"], "equipment": ["Dumbbell", "Bench"], "notes": ""},
+        {"base_name": "Decline Press", "name": "Smith Machine Decline Press", "muscles": ["LowerChest"], "equipment": ["Smith", "Bench"], "notes": ""},
+        {"base_name": "Decline Press", "name": "PlateLoaded Decline Press", "muscles": ["LowerChest"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Decline Press", "name": "PinLoaded Decline Press", "muscles": ["LowerChest"], "equipment": ["Machine"], "notes": ""},
+
+        {"base_name": "Fly", "name": "Dumbbell Fly", "muscles": ["MidChest"], "equipment": ["Dumbbell", "Bench"], "notes": ""},
+        {"base_name": "Fly", "name": "Cable Fly", "muscles": ["MidChest"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Fly", "name": "PlateLoaded Fly", "muscles": ["MidChest"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Fly", "name": "PinLoaded Fly", "muscles": ["MidChest"], "equipment": ["Machine"], "notes": ""},
+
+        {"base_name": "Incline Fly", "name": "Dumbbell Incline Fly", "muscles": ["UpperChest"], "equipment": ["Dumbbell", "Bench"], "notes": ""},
+        {"base_name": "Incline Fly", "name": "Cable Incline Fly", "muscles": ["UpperChest"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Incline Fly", "name": "PlateLoaded Incline Fly", "muscles": ["UpperChest"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Incline Fly", "name": "PinLoaded Incline Fly", "muscles": ["UpperChest"], "equipment": ["Machine"], "notes": ""},
+
+        {"base_name": "Decline Fly", "name": "Dumbbell Decline Fly", "muscles": ["LowerChest"], "equipment": ["Dumbbell", "Bench"], "notes": ""},
+        {"base_name": "Decline Fly", "name": "Cable Decline Fly", "muscles": ["LowerChest"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Decline Fly", "name": "PlateLoaded Decline Fly", "muscles": ["LowerChest"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Decline Fly", "name": "PinLoaded Decline Fly", "muscles": ["LowerChest"], "equipment": ["Machine"], "notes": ""},
+
+        {"base_name": "Push Up", "name": "Bodyweight Push Up", "muscles": ["MidChest"], "equipment": ["Bodyweight"], "notes": ""},
+        {"base_name": "Push Up", "name": "Dumbbell Push Up", "muscles": ["MidChest"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Push Up", "name": "Incline Push Up", "muscles": ["MidChest"], "equipment": ["Bodyweight", "Bench"], "notes": ""},
+        {"base_name": "Push Up", "name": "Decline Push Up", "muscles": ["MidChest"], "equipment": ["Bodyweight", "Bench"], "notes": ""},
+
+        {"base_name": "Dips", "name": "Bodyweight Dips", "muscles": ["MidChest"], "equipment": ["Bodyweight"], "notes": ""},
+        {"base_name": "Dips", "name": "Weighted Dips", "muscles": ["MidChest"], "equipment": ["Bodyweight"], "notes": ""},
+        {"base_name": "Dips", "name": "Machine Dips", "muscles": ["MidChest"], "equipment": ["Machine"], "notes": ""},
 
         # Back
-        # lat pulldowns and variations
-        {"base": "Lat Pulldown", "name": "Lat Pulldown", "description": "Lat Pulldown", "muscle": ["Back", "Lats"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"]},
-        {"base": "Lat Pulldown", "name": "Wide Grip Lat Pulldown", "description": "Wide Grip Lat Pulldown", "muscle": ["Back", "Lats"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"], "grip_type": "wide grip", "form_note": "Wide grip targets outer back muscles"},
-        {"base": "Lat Pulldown", "name": "Neutral Grip Lat Pulldown", "description": "Neutral Grip Lat Pulldown", "muscle": ["Back", "Lats"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"], "grip_type": "neutral grip", "form_note": "Neutral grip targets inner back muscles"},
-        {"base": "Lat Pulldown", "name": "Single Arm Lat Pulldown", "description": "Single Arm Lat Pulldown", "muscle": ["Back", "Lats"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"], "is_single_arm": True},
-        # lat pullovers and single arm
-        {"base": "Lat Pullover", "name": "Lat Pullover", "description": "Lat Pullover", "muscle": ["Back", "Lats"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"]},
-        {"base": "Lat Pullover", "name": "Single Arm Cable Lat Pullover", "description": "Single Arm Cable Lat Pullover", "muscle": ["Back", "Lats"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"], "is_single_arm": True},
-        {"base": "Lat Pullover", "name": "Machine Lat Pullover", "description": "Machine Lat Pullover", "muscle": ["Back", "Lats"], "equipment": ["Machine"], "movement_type": ["isolation", "pull"]},
-        {"base": "Lat Pullover", "name": "Single Arm Machine Lat Pullover", "description": "Single Arm Machine Lat Pullover", "muscle": ["Back", "Lats"], "equipment": ["Machine"], "movement_type": ["isolation", "pull"], "is_single_arm": True},
-        # pull ups and variations
-        {"base": "Pullup", "name": "Pullup", "description": "Pullup", "muscle": ["Back", "Lats", "Upper Back", "Biceps"], "equipment": ["Bodyweight"], "movement_type": ["compound", "pull"]},
-        {"base": "Pullup", "name": "Wide Grip Pullup", "description": "Wide Grip Pullup", "muscle": ["Back", "Lats", "Upper Back", "Biceps"], "equipment": ["Bodyweight"], "movement_type": ["compound", "pull"], "grip_type": "wide grip", "form_note": "Wide grip targets outer back muscles"},
-        {"base": "Pullup", "name": "Chinup", "description": "Chinup", "muscle": ["Back", "Lats", "Upper Back", "Biceps"], "equipment": ["Bodyweight"], "movement_type": ["compound", "pull"], "grip_type": "underhand grip", "form_note": "Underhand grip targets inner back muscles"},
-        {"base": "Pullup", "name": "Neutral Grip Pullup", "description": "Neutral Grip Pullup", "muscle": ["Back", "Lats", "Upper Back", "Biceps"], "equipment": ["Bodyweight"], "movement_type": ["compound", "pull"], "grip_type": "neutral grip", "form_note": "Neutral grip targets inner back muscles"},
-        # barbell bent over rows
-        {"base": "Barbell Bent Over Row", "name": "Barbell Bent Over Row", "description": "Barbell Bent Over Row", "muscle": ["Back", "Upper Back", "Lats", "Lower Back"], "equipment": ["Barbell"], "movement_type": ["compound", "pull"]},
-        {"base": "Barbell Bent Over Row", "name": "Wide Grip Barbell Bent Over Row", "description": "Wide Grip Barbell Bent Over Row", "muscle": ["Back", "Upper Back", "Lats", "Lower Back"], "equipment": ["Barbell"], "movement_type": ["compound", "pull"], "grip_type": "wide grip", "form_note": "Wide grip targets outer back muscles"},
-        # smith bent over rows
-        {"base": "Smith Bent Over Row", "name": "Smith Bent Over Row", "description": "Smith Bent Over Row", "muscle": ["Back", "Lats", "Upper Back", "Lower Back"], "equipment": ["Smith"], "movement_type": ["isolation", "pull"]},
-        {"base": "Smith Bent Over Row", "name": "Wide Grip Smith Bent Over Row", "description": "Wide Grip Smith Bent Over Row", "muscle": ["Back", "Lats", "Upper Back", "Lower Back"], "equipment": ["Smith"], "movement_type": ["isolation", "pull"], "grip_type": "wide grip", "form_note": "Wide grip targets outer back muscles"},
-        # t bar rows
-        {"base": "T Bar Row", "name": "T Bar Row", "description": "T Bar Row", "muscle": ["Back", "Lats", "Upper Back"], "equipment": ["Barbell", "Machine"], "movement_type": ["isolation", "pull"]},
-        # machine rows
-        {"base": "Machine Row", "name": "Machine Row", "description": "Machine Row", "muscle": ["Back", "Upper Back", "Lats"], "equipment": ["Machine"], "movement_type": ["isolation", "pull"]},
-        {"base": "Machine Row", "name": "Single Arm Machine Row", "description": "Single Arm Machine Row", "muscle": ["Back", "Lats"], "equipment": ["Machine"], "movement_type": ["isolation", "pull"], "is_single_arm": True},
-        # cable rows
-        {"base": "Cable Row", "name": "Cable Row", "description": "Cable Row", "muscle": ["Back", "Lats", "Upper Back", "Lower Back"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"]},
-        {"base": "Cable Row", "name": "Single Arm Cable Row", "description": "Single Arm Cable Row", "muscle": ["Back", "Lats", "Upper Back", "Lower Back"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"], "is_single_arm": True},
-        {"base": "Cable Row", "name": "Flat Bar Cable Row", "description": "Flat Bar Cable Row", "muscle": ["Back", "Upper Back", "Lats"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"]},
-        {"base": "Close Grip Cable Row", "name": "Close Grip Cable Row", "description": "Close Grip Cable Row", "muscle": ["Back", "Lower Back", "Lats"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"], "grip_type": "close grip", "form_note": "Close grip targets inner and lower back muscles"},
-        # chest supported dumbbell rows
-        {"base": "Chest Supported Dumbbell Row", "name": "Chest Supported Dumbbell Row", "description": "Chest Supported Dumbbell Row", "muscle": ["Back", "Lats", "Upper Back"], "equipment": ["Dumbbell", "Bench"], "movement_type": ["isolation", "pull"]},
-        # single arm dumbbell row
-        {"base": "Single Arm Dumbbell Row", "name": "Single Arm Dumbbell Row", "description": "Single Arm Dumbbell Row", "muscle": ["Back", "Lats", "Upper Back", "Lower Back"], "equipment": ["Dumbbell", "Bench"], "movement_type": ["isolation", "pull"], "is_single_arm": True},
-        
+        {"base_name": "Pull Up", "name": "Bodyweight Pull Up", "muscles": ["Lats"], "equipment": ["Bodyweight"], "notes": ""},
+        {"base_name": "Pull Up", "name": "Weighted Pull Up", "muscles": ["Lats"], "equipment": ["Bodyweight"], "notes": ""},
+        {"base_name": "Pull Up", "name": "Assisted Pull Up", "muscles": ["Lats"], "equipment": ["Machine"], "notes": ""},
+
+        {"base_name": "Lat Pulldown", "name": "Cable Lat Pulldown", "muscles": ["Lats"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Lat Pulldown", "name": "PlateLoaded Lat Pulldown", "muscles": ["Lats"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Lat Pulldown", "name": "PinLoaded Lat Pulldown", "muscles": ["Lats"], "equipment": ["Machine"], "notes": ""},
+
+        {"base_name": "Row", "name": "Barbell Row", "muscles": ["MidBack"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Row", "name": "Dumbbell Row", "muscles": ["MidBack"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Row", "name": "Cable Row", "muscles": ["MidBack"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Row", "name": "PlateLoaded Row", "muscles": ["MidBack"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Row", "name": "PinLoaded Row", "muscles": ["MidBack"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Row", "name": "Smith Machine Row", "muscles": ["MidBack"], "equipment": ["Smith"], "notes": ""},
+
+        {"base_name": "T-Bar Row", "name": "T-Bar Row", "muscles": ["MidBack"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "T-Bar Row", "name": "PlateLoaded T-Bar Row", "muscles": ["MidBack"], "equipment": ["Machine"], "notes": ""},
+
+        {"base_name": "Deadlift", "name": "Barbell Deadlift", "muscles": ["LowerBack", "MidBack"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Deadlift", "name": "Dumbbell Deadlift", "muscles": ["LowerBack", "MidBack"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Deadlift", "name": "Smith Machine Deadlift", "muscles": ["LowerBack", "MidBack"], "equipment": ["Smith"], "notes": ""},
+        {"base_name": "Deadlift", "name": "Trap Bar Deadlift", "muscles": ["LowerBack", "MidBack"], "equipment": ["Barbell"], "notes": ""},
+
+        {"base_name": "Shrug", "name": "Barbell Shrug", "muscles": ["Traps"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Shrug", "name": "Dumbbell Shrug", "muscles": ["Traps"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Shrug", "name": "Smith Machine Shrug", "muscles": ["Traps"], "equipment": ["Smith"], "notes": ""},
+        {"base_name": "Shrug", "name": "PlateLoaded Shrug", "muscles": ["Traps"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Shrug", "name": "PinLoaded Shrug", "muscles": ["Traps"], "equipment": ["Machine"], "notes": ""},
 
         # Shoulders
-        # Dumbbell Shoulder Press
-        {"base": "Dumbbell Shoulder Press", "name": "Dumbbell Shoulder Press", "description": "Dumbbell Shoulder Press", "muscle": ["Shoulders", "Front Delt", "Side Delt"], "equipment": ["Dumbbell", "Bench"], "movement_type": ["isolation", "push"]},
-        # Machine Shoulder Press
-        {"base": "Machine Shoulder Press", "name": "Machine Shoulder Press", "description": "Machine Shoulder Press", "muscle": ["Shoulders", "Front Delt", "Side Delt"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # Smith Shoulder Press
-        {"base": "Smith Shoulder Press", "name": "Smith Shoulder Press", "description": "Smith Shoulder Press", "muscle": ["Shoulders", "Front Delt", "Side Delt"], "equipment": ["Smith"], "movement_type": ["isolation", "push"]},
-        # Barbell Shoulder Press
-        {"base": "Barbell Shoulder Press", "name": "Barbell Shoulder Press", "description": "Barbell Shoulder Press", "muscle": ["Shoulders", "Front Delt", "Side Delt"], "equipment": ["Barbell"], "movement_type": ["isolation", "push"]},
-        # Front Delt Dumbbell Raise
-        {"base": "Front Delt Dumbbell Raise", "name": "Front Delt Dumbbell Raise", "description": "Front Delt Dumbbell Raise", "muscle": ["Shoulders", "Front Delt"], "equipment": ["Dumbbell"], "movement_type": ["isolation", "push"]},
-        # Front Delt Cable Raise
-        {"base": "Front Delt Cable Raise", "name": "Front Delt Cable Raise", "description": "Front Delt Cable Raise", "muscle": ["Shoulders", "Front Delt"], "equipment": ["Cable"], "movement_type": ["isolation", "push"]},
-        # Dumbbell Lateral Raise
-        {"base": "Dumbbell Lateral Raise", "name": "Dumbbell Lateral Raise", "description": "Dumbbell Lateral Raise", "muscle": ["Shoulders", "Front Delt", "Side Delt"], "equipment": ["Dumbbell"], "movement_type": ["isolation", "push"]},
-        # Cable Lateral Raise
-        {"base": "Cable Lateral Raise", "name": "Cable Lateral Raise", "description": "Cable Lateral Raise", "muscle": ["Shoulders", "Front Delt", "Side Delt"], "equipment": ["Cable"], "movement_type": ["isolation", "push"]},
-        # Machine Lateral Raise
-        {"base": "Machine Lateral Raise", "name": "Machine Lateral Raise", "description": "Machine Lateral Raise", "muscle": ["Shoulders", "Front Delt", "Side Delt"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # Single Arm Cable Lateral Raise
-        {"base": "Single Arm Cable Lateral Raise", "name": "Single Arm Cable Lateral Raise", "description": "Single Arm Cable Lateral Raise", "muscle": ["Shoulders", "Front Delt", "Side Delt"], "equipment": ["Cable"], "movement_type": ["isolation", "push"], "is_single_arm": True},
-        # Rear Delt Dumbbell Fly
-        {"base": "Rear Delt Dumbbell Fly", "name": "Rear Delt Dumbbell Fly", "description": "Rear Delt Dumbbell Fly", "muscle": ["Shoulders", "Rear Delt"], "equipment": ["Dumbbell"], "movement_type": ["isolation", "push"]},
-        # Rear Delt Cable Fly
-        {"base": "Rear Delt Cable Fly", "name": "Rear Delt Cable Fly", "description": "Rear Delt Cable Fly", "muscle": ["Shoulders", "Rear Delt"], "equipment": ["Cable"], "movement_type": ["isolation", "push"]},
-        # Single Arm Rear Delt Cable Fly
-        {"base": "Single Arm Rear Delt Cable Fly", "name": "Single Arm Rear Delt Cable Fly", "description": "Single Arm Rear Delt Cable Fly", "muscle": ["Shoulders", "Rear Delt"], "equipment": ["Cable"], "movement_type": ["isolation", "push"], "is_single_arm": True},
-        # Machine Rear Delt Fly
-        {"base": "Machine Rear Delt Fly", "name": "Machine Rear Delt Fly", "description": "Machine Rear Delt Fly", "muscle": ["Shoulders", "Rear Delt"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # Cable Face Pulls
-        {"base": "Cable Face Pull", "name": "Cable Face Pull", "description": "Cable Face Pull", "muscle": ["Shoulders", "Rear Delt"], "equipment": ["Cable"], "movement_type": ["isolation", "push"]},
-        # Dumbbell Shrugs
-        {"base": "Dumbbell Shrug", "name": "Dumbbell Shrug", "description": "Dumbbell Shrug", "muscle": ["Shoulders", "Upper Back"], "equipment": ["Dumbbell"], "movement_type": ["isolation", "push"]},
-        # EZ Bar Rear Delt Raises
-        {"base": "EZ Bar Rear Delt Raise", "name": "EZ Bar Rear Delt Raise", "description": "EZ Bar Rear Delt Raise", "muscle": ["Shoulders", "Rear Delt"], "equipment": ["EZ Bar"], "movement_type": ["isolation", "push"]},
+        {"base_name": "Overhead Press", "name": "Barbell Overhead Press", "muscles": ["FrontDelt"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Overhead Press", "name": "Dumbbell Overhead Press", "muscles": ["FrontDelt"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Overhead Press", "name": "Smith Machine Overhead Press", "muscles": ["FrontDelt"], "equipment": ["Smith"], "notes": ""},
+        {"base_name": "Overhead Press", "name": "PlateLoaded Overhead Press", "muscles": ["FrontDelt"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Overhead Press", "name": "PinLoaded Overhead Press", "muscles": ["FrontDelt"], "equipment": ["Machine"], "notes": ""},
 
-        # Triceps
-        # Dips
-        {"base": "Dip", "name": "Dip", "description": "Dip", "muscle": ["Triceps"], "equipment": ["Bodyweight"], "movement_type": ["compound", "push"]},
-        {"base": "Dip", "name": "Weighted Dip", "description": "Weighted Dip", "muscle": ["Triceps"], "equipment": ["Bodyweight"], "movement_type": ["compound", "push"], "form_note": "Weighted dip with a belt"},
-        {"base": "Dip", "name": "Machine Dip", "description": "Machine Dip", "muscle": ["Triceps"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # Skull Crushers
-        {"base": "Skull Crusher", "name": "Skull Crusher", "description": "Skull Crusher", "muscle": ["Triceps"], "equipment": ["EZ Bar"], "movement_type": ["isolation", "push"]},
-        # Cable Tricep Extensions
-        {"base": "Cable Tricep Extension", "name": "Cable Tricep Extension", "description": "Cable Tricep Extension", "muscle": ["Triceps"], "equipment": ["Cable"], "movement_type": ["isolation", "push"]},
-        {"base": "Cable Tricep Extension", "name": "Single Arm Cable Tricep Extension", "description": "Single Arm Cable Tricep Extension", "muscle": ["Triceps"], "equipment": ["Cable"], "movement_type": ["isolation", "push"], "is_single_arm": True},
-        # Cable Tricep Pushdowns
-        {"base": "Cable Tricep Pushdown", "name": "Cable Tricep Pushdown", "description": "Tricep Pushdown", "muscle": ["Triceps"], "equipment": ["Cable"], "movement_type": ["isolation", "push"]},
-        {"base": "Cable Tricep Pushdown", "name": "Single Arm Cable Tricep Pushdown", "description": "Single Arm Tricep Pushdown", "muscle": ["Triceps"], "equipment": ["Cable"], "movement_type": ["isolation", "push"], "is_single_arm": True},
-        # Cable Tricep Kickbacks
-        {"base": "Cable Tricep Kickback", "name": "Cable Tricep Kickback", "description": "Tricep Kickback", "muscle": ["Triceps"], "equipment": ["Cable"], "movement_type": ["isolation", "push"]},
-        {"base": " Cable Tricep Kickback", "name": "Single Arm Cable Tricep Kickback", "description": "Single Arm Tricep Kickback", "muscle": ["Triceps"], "equipment": ["Cable"], "movement_type": ["isolation", "push"], "is_single_arm": True},
-        # Dumbbell Tricep Kickbacks
-        {"base": "Dumbbell Tricep Kickback", "name": "Dumbbell Tricep Kickback", "description": "Tricep Kickback", "muscle": ["Triceps"], "equipment": ["Dumbbell"], "movement_type": ["isolation", "push"]},
-        {"base": "Dumbbell Tricep Kickback", "name": "Single Arm Dumbbell Tricep Kickback", "description": "Single Arm Tricep Kickback", "muscle": ["Triceps"], "equipment": ["Dumbbell"], "movement_type": ["isolation", "push"], "is_single_arm": True},
-        # Cable Overhead Tricep Extensions
-        {"base": "Cable Overhead Tricep Extension", "name": "Cable Overhead Tricep Extension", "description": "Cable Overhead Tricep Extension", "muscle": ["Triceps"], "equipment": ["Cable"], "movement_type": ["isolation", "push"]},
-        {"base": "Cable Overhead Tricep Extension", "name": "Single Arm Cable Overhead Tricep Extension", "description": "Single Arm Cable Overhead Tricep Extension", "muscle": ["Triceps"], "equipment": ["Cable"], "movement_type": ["isolation", "push"], "is_single_arm": True},
-        # Single Arm Dumbbell Overhead Tricep Extensions
-        {"base": "Single Arm Dumbbell Overhead Tricep Extension", "name": "Single Arm Dumbbell Overhead Tricep Extension", "description": "Single Arm Dumbbell Overhead Tricep Extension", "muscle": ["Triceps"], "equipment": ["Dumbbell"], "movement_type": ["isolation", "push"], "is_single_arm": True},
+        {"base_name": "Lateral Raise", "name": "Dumbbell Lateral Raise", "muscles": ["SideDelt"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Lateral Raise", "name": "Cable Lateral Raise", "muscles": ["SideDelt"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Lateral Raise", "name": "PlateLoaded Lateral Raise", "muscles": ["SideDelt"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Lateral Raise", "name": "PinLoaded Lateral Raise", "muscles": ["SideDelt"], "equipment": ["Machine"], "notes": ""},
 
-        # Biceps
-        # Dumbbell Bicep Curl and Incline Bicep Curl
-        {"base": "Dumbbell Bicep Curl", "name": "Dumbbell Bicep Curl", "description": "Dumbbell Bicep Curl", "muscle": ["Biceps"], "equipment": ["Dumbbell"], "movement_type": ["isolation", "pull"]},
-        {"base": "Dumbbell Bicep Curl", "name": "Incline Dumbbell Bicep Curl", "description": "Incline Dumbbell Bicep Curl", "muscle": ["Biceps"], "equipment": ["Dumbbell", "Bench"], "movement_type": ["isolation", "pull"]},
-        # Cable Bicep Curl
-        {"base": "Cable Bicep Curl", "name": "Cable Bicep Curl", "description": "Cable Bicep Curl", "muscle": ["Biceps"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"]},
-        {"base": "Cable Bicep Curl", "name": "Single Arm Cable Bicep Curl", "description": "Single Arm Cable Bicep Curl", "muscle": ["Biceps"], "equipment": ["Cable"], "movement_type": ["isolation", "pull"], "is_single_arm": True},
-        # Machine Bicep Curl and Preacher Curl
-        {"base": "Machine Bicep Curl", "name": "Machine Bicep Curl", "description": "Machine Bicep Curl", "muscle": ["Biceps"], "equipment": ["Machine"], "movement_type": ["isolation", "pull"]},
-        {"base": "Machine Bicep Curl", "name": "Machine Preacher Curl", "description": "Machine Preacher Curl", "muscle": ["Biceps"], "equipment": ["Machine"], "movement_type": ["isolation", "pull"]},
-        # EZ Bar Bicep Curl and EZ Bar Preacher Curl
-        {"base": "EZ Bar Bicep Curl", "name": "EZ Bar Bicep Curl", "description": "EZ Bar Bicep Curl", "muscle": ["Biceps"], "equipment": ["EZ Bar"], "movement_type": ["isolation", "pull"]},
-        {"base": "EZ Bar Bicep Curl", "name": "EZ Bar Preacher Curl", "description": "EZ Bar Preacher Curl", "muscle": ["Biceps"], "equipment": ["EZ Bar", "Bench"], "movement_type": ["isolation", "pull"]},
-        # Hammer Curls
-        {"base": "Hammer Curl", "name": "Hammer Curl", "description": "Hammer Curl", "muscle": ["Biceps"], "equipment": ["Dumbbell"], "movement_type": ["isolation", "pull"]},
-        {"base": "Hammer Curl", "name": "Incline Hammer Curl", "description": "Incline Hammer Curl", "muscle": ["Biceps"], "equipment": ["Dumbbell", "Bench"], "movement_type": ["isolation", "pull"]},
-        # Concentration Curls
-        {"base": "Concentration Curl", "name": "Concentration Curl", "description": "Concentration Curl", "muscle": ["Biceps"], "equipment": ["Dumbbell", "Bench"], "movement_type": ["isolation", "pull"]},
-        {"base": "Concentration Curl", "name": "Single Arm Concentration Curl", "description": "Single Arm Concentration Curl", "muscle": ["Biceps"], "equipment": ["Dumbbell", "Bench"], "movement_type": ["isolation", "pull"], "is_single_arm": True},
+        {"base_name": "Reverse Fly", "name": "Dumbbell Reverse Fly", "muscles": ["RearDelt"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Reverse Fly", "name": "Cable Reverse Fly", "muscles": ["RearDelt"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Reverse Fly", "name": "Reverse Pec Deck", "muscles": ["RearDelt"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Reverse Fly", "name": "Rear Delt PlateLoaded Machine Fly", "muscles": ["RearDelt"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Reverse Fly", "name": "Bent-over Rear Delt Raise", "muscles": ["RearDelt"], "equipment": ["Barbell"], "notes": ""},
+        # Front/Side combination
+        {"base_name": "Y Raise", "name": "Dumbbell Y Raise", "muscles": ["FrontDelt", "SideDelt"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Y Raise", "name": "Cable Y Raise", "muscles": ["FrontDelt", "SideDelt"], "equipment": ["Cable"], "notes": ""},
+
+        # Arms
+        # Biceps – Curl
+        {"base_name": "Curl", "name": "Barbell Curl", "muscles": ["Biceps"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Curl", "name": "EZBar Curl", "muscles": ["Biceps"], "equipment": ["EZBar"], "notes": ""},
+        {"base_name": "Curl", "name": "Dumbbell Curl", "muscles": ["Biceps"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Curl", "name": "Cable Curl", "muscles": ["Biceps"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Curl", "name": "PlateLoaded Machine Curl", "muscles": ["Biceps"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Curl", "name": "PinLoaded Machine Curl", "muscles": ["Biceps"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Curl", "name": "PlateLoaded Preacher Curl", "muscles": ["Biceps"], "equipment": ["Machine", "Bench"], "notes": ""},
+        {"base_name": "Curl", "name": "PinLoaded Preacher Curl", "muscles": ["Biceps"], "equipment": ["Machine", "Bench"], "notes": ""},
+        {"base_name": "Curl", "name": "Dumbbell Preacher Curl", "muscles": ["Biceps"], "equipment": ["Dumbbell", "Bench"], "notes": ""},
+        {"base_name": "Curl", "name": "Incline Dumbbell Curl", "muscles": ["Biceps"], "equipment": ["Dumbbell", "Bench"], "notes": ""},
+        {"base_name": "Curl", "name": "Zottman Curl", "muscles": ["Biceps"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Curl", "name": "Dumbbell Spider Curl", "muscles": ["Biceps"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Curl", "name": "EZBar Spider Curl", "muscles": ["Biceps"], "equipment": ["EZBar"], "notes": ""},
+        {"base_name": "Curl", "name": "Dumbbell Drag Curl", "muscles": ["Biceps"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Curl", "name": "Cable Drag Curl", "muscles": ["Biceps"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Curl", "name": "Cable Bayesian Curl", "muscles": ["Biceps"], "equipment": ["Cable"], "notes": ""},
+
+        # Chin Up
+        {"base_name": "Chin Up", "name": "Bodyweight Chin Up", "muscles": ["Biceps"], "equipment": ["Bodyweight"], "notes": ""},
+        {"base_name": "Chin Up", "name": "Cable Chin Up", "muscles": ["Biceps"], "equipment": ["Cable"], "notes": ""},
+
+        # Triceps – Extension-Pushdown
+        {"base_name": "Extension-Pushdown", "name": "PlateLoaded Tricep Extension", "muscles": ["Triceps"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Extension-Pushdown", "name": "PinLoaded Tricep Extension", "muscles": ["Triceps"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Extension-Pushdown", "name": "Overhead Dumbbell Tricep Extension", "muscles": ["Triceps"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Extension-Pushdown", "name": "EZBar Tricep Skullcrusher", "muscles": ["Triceps"], "equipment": ["EZBar"], "notes": ""},
+        {"base_name": "Extension-Pushdown", "name": "FlatBar Tricep Skullcrusher", "muscles": ["Triceps"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Extension-Pushdown", "name": "Dumbbell Tricep Skullcrusher", "muscles": ["Triceps"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Extension-Pushdown", "name": "Cable Tricep Skullcrusher", "muscles": ["Triceps"], "equipment": ["Cable"], "notes": ""},
+
+        # Cross Cable & Kickbacks
+        {"base_name": "Cross Cable Tricep Extensions", "name": "Cross Cable Tricep Extensions", "muscles": ["Triceps"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Tricep Kickback", "name": "Dumbbell Tricep Kickbacks", "muscles": ["Triceps"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Tricep Kickback", "name": "Cable Tricep Kickbacks", "muscles": ["Triceps"], "equipment": ["Cable"], "notes": ""},
+
+        # Pushdowns & JM Press
+        {"base_name": "Extension-Pushdown", "name": "PinLoaded Tricep Pushdown", "muscles": ["Triceps"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Extension-Pushdown", "name": "PlateLoaded Tricep Pushdown", "muscles": ["Triceps"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "JM Press", "name": "Barbell JM Press", "muscles": ["Triceps"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "JM Press", "name": "Dumbbell JM Press", "muscles": ["Triceps"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "JM Press", "name": "Smith Machine JM Press", "muscles": ["Triceps"], "equipment": ["Smith"], "notes": ""},
+
+        # Forearms – Wrist Curl/Extension
+        {"base_name": "Wrist Curl-Extension", "name": "Barbell Wrist Curl", "muscles": ["Forearms"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Wrist Curl-Extension", "name": "Dumbbell Wrist Curl", "muscles": ["Forearms"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Wrist Curl-Extension", "name": "Reverse EZBar Curl", "muscles": ["Forearms"], "equipment": ["EZBar"], "notes": ""},
+        {"base_name": "Wrist Curl-Extension", "name": "Reverse FlatBar Curl", "muscles": ["Forearms"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Wrist Curl-Extension", "name": "Reverse Dumbbell Curl", "muscles": ["Forearms"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Wrist Curl-Extension", "name": "Behind-the-Back FlatBar Wrist Curl", "muscles": ["Forearms"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Wrist Curl-Extension", "name": "Behind-the-Back EZBar Wrist Curl", "muscles": ["Forearms"], "equipment": ["EZBar"], "notes": ""},
+
+        # GripRotation
+        {"base_name": "GripRotation", "name": "Plate Pinches", "muscles": ["Forearms"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "GripRotation", "name": "Fat Grip Dumbbell Hold", "muscles": ["Forearms"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "GripRotation", "name": "Barbell Hold", "muscles": ["Forearms"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "GripRotation", "name": "Wrist Roller", "muscles": ["Forearms"], "equipment": ["Machine"], "notes": ""},
+
+        # Quads – Leg Extension
+        {"base_name": "Leg Extension", "name": "PlateLoaded Leg Extensions", "muscles": ["Quads"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Leg Extension", "name": "PinLoaded Leg Extensions", "muscles": ["Quads"], "equipment": ["Machine"], "notes": ""},
+
+        # Quads – Sissy Squat
+        {"base_name": "Sissy Squat", "name": "Bodyweight Sissy Squat", "muscles": ["Quads"], "equipment": ["Bodyweight"], "notes": ""},
+        {"base_name": "Sissy Squat", "name": "Weighted Sissy Squat", "muscles": ["Quads"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Sissy Squat", "name": "Smith Machine Sissy Squat", "muscles": ["Quads"], "equipment": ["Smith"], "notes": ""},
+        {"base_name": "Sissy Squat", "name": "Hacksquat Sissy Squat", "muscles": ["Quads"], "equipment": ["Machine"], "notes": ""},
+
+        # Quads – Front Squat
+        {"base_name": "Front Squat", "name": "Barbell Front Squat", "muscles": ["Quads"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Front Squat", "name": "Dumbbell Front Squat", "muscles": ["Quads"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Front Squat", "name": "Smith Machine Front Squat", "muscles": ["Quads"], "equipment": ["Smith"], "notes": ""},
+        {"base_name": "Front Squat", "name": "Goblet Squat", "muscles": ["Quads"], "equipment": ["Dumbbell"], "notes": ""},
+
+        # Hamstrings – Leg Curl
+        {"base_name": "Leg Curl", "name": "Lying PlateLoaded Leg Curl", "muscles": ["Hamstrings"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Leg Curl", "name": "Lying PinLoaded Leg Curl", "muscles": ["Hamstrings"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Leg Curl", "name": "PlateLoaded Leg Curl", "muscles": ["Hamstrings"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Leg Curl", "name": "PinLoaded Leg Curl", "muscles": ["Hamstrings"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Leg Curl", "name": "Standing Leg Curl", "muscles": ["Hamstrings"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Leg Curl", "name": "Cable Leg Curl", "muscles": ["Hamstrings"], "equipment": ["Cable"], "notes": ""},
+
+        # Hamstrings – RDL
+        {"base_name": "RDL", "name": "Barbell RDL", "muscles": ["Hamstrings"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "RDL", "name": "Dumbbell RDL", "muscles": ["Hamstrings"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "RDL", "name": "Smith Machine RDL", "muscles": ["Hamstrings"], "equipment": ["Smith"], "notes": ""},
+        {"base_name": "RDL", "name": "PlateLoaded RDL", "muscles": ["Hamstrings"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "RDL", "name": "PinLoaded RDL", "muscles": ["Hamstrings"], "equipment": ["Machine"], "notes": ""},
+
+        # Glutes – Hip Thrust
+        {"base_name": "Hip Thrust", "name": "Barbell Hip Thrust", "muscles": ["Glutes"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Hip Thrust", "name": "Dumbbell Hip Thrust", "muscles": ["Glutes"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Hip Thrust", "name": "Smith Machine Hip Thrust", "muscles": ["Glutes"], "equipment": ["Smith"], "notes": ""},
+        {"base_name": "Hip Thrust", "name": "PlateLoaded Hip Thrust", "muscles": ["Glutes"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Hip Thrust", "name": "PinLoaded Hip Thrust", "muscles": ["Glutes"], "equipment": ["Machine"], "notes": ""},
+
+        # Glutes – Glute Kickback
+        {"base_name": "Glute Kickback", "name": "Cable Glute Kickback", "muscles": ["Glutes"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Glute Kickback", "name": "PlateLoaded Glute Kickback", "muscles": ["Glutes"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Glute Kickback", "name": "PinLoaded Glute Kickback", "muscles": ["Glutes"], "equipment": ["Machine"], "notes": ""},
+
+        # Glutes – Glute Bridges
+        {"base_name": "Glute Bridges", "name": "Bodyweight Glute Bridge", "muscles": ["Glutes"], "equipment": ["Bodyweight"], "notes": ""},
+        {"base_name": "Glute Bridges", "name": "Barbell Glute Bridge", "muscles": ["Glutes"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Glute Bridges", "name": "Dumbbell Glute Bridge", "muscles": ["Glutes"], "equipment": ["Dumbbell"], "notes": ""},
+
+        # Calves – Calf Raise
+        {"base_name": "Calf Raise", "name": "Barbell Calf Raise", "muscles": ["Calves"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Calf Raise", "name": "Dumbbell Calf Raise", "muscles": ["Calves"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Calf Raise", "name": "PlateLoaded Calf Raise", "muscles": ["Calves"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Calf Raise", "name": "PinLoaded Calf Raise", "muscles": ["Calves"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Calf Raise", "name": "Seated PlateLoaded Calf Raise", "muscles": ["Calves"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Calf Raise", "name": "Seated PinLoaded Calf Raise", "muscles": ["Calves"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Calf Raise", "name": "Smith Machine Calf Raise", "muscles": ["Calves"], "equipment": ["Smith"], "notes": ""},
+
+        # Adductors – Adduction Machine
+        {"base_name": "Adduction Machine", "name": "PinLoaded Adduction Machine", "muscles": ["Adductors"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Adduction Machine", "name": "PlateLoaded Adduction Machine", "muscles": ["Adductors"], "equipment": ["Machine"], "notes": ""},
+
+        # Adductors – Cable Adduction
+        {"base_name": "Cable Adduction", "name": "Standing Cable Inner Thigh Adduction", "muscles": ["Adductors"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Cable Adduction", "name": "Lying Cable Adduction", "muscles": ["Adductors"], "equipment": ["Cable"], "notes": ""},
+
+        # Abductors – Abduction Machine
+        {"base_name": "Abduction Machine", "name": "PinLoaded Abduction Machine", "muscles": ["Abductors"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Abduction Machine", "name": "PlateLoaded Abduction Machine", "muscles": ["Abductors"], "equipment": ["Machine"], "notes": ""},
+
+        # Abductors – Cable Abduction
+        {"base_name": "Cable Abduction", "name": "Standing Cable Outer Thigh Abduction", "muscles": ["Abductors"], "equipment": ["Cable"], "notes": ""},
+        {"base_name": "Cable Abduction", "name": "Lying Cable Outer Leg Raise", "muscles": ["Abductors"], "equipment": ["Cable"], "notes": ""},
+
+        # Compound – Squat
+        {"base_name": "Squat", "name": "Barbell Back Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Squat", "name": "Barbell Front Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Squat", "name": "Dumbbell Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Squat", "name": "Goblet Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Squat", "name": "Smith Machine Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Smith"], "notes": ""},
+        {"base_name": "Squat", "name": "Zercher Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Squat", "name": "Hack Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Squat", "name": "Trap Bar Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Barbell"], "notes": ""},
+
+        # Compound – Lunge
+        {"base_name": "Lunge", "name": "Bodyweight Lunge", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Bodyweight"], "notes": ""},
+        {"base_name": "Lunge", "name": "Dumbbell Lunge", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Dumbbell"], "notes": ""},
+        {"base_name": "Lunge", "name": "Barbell Lunge", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Barbell"], "notes": ""},
+        {"base_name": "Lunge", "name": "Dumbbell Bulgarian Split Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Dumbbell", "Bench"], "notes": ""},
+        {"base_name": "Lunge", "name": "Barbell Bulgarian Split Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Barbell", "Bench"], "notes": ""},
+        {"base_name": "Lunge", "name": "Smith Machine Bulgarian Split Squat", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Smith", "Bench"], "notes": ""},
+        {"base_name": "Lunge", "name": "Smith Machine Lunge", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Smith"], "notes": ""},
+
+        # Compound – Leg Press
+        {"base_name": "Leg Press", "name": "PinLoaded Leg Press", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Machine"], "notes": ""},
+        {"base_name": "Leg Press", "name": "PlateLoaded Leg Press", "muscles": ["Glutes", "Hamstrings", "Quads"], "equipment": ["Machine"], "notes": ""},
+
+    ]
+    created_base_exercises = {}
+    
+    for exercise in exercises:
+        base_name = exercise['base_name']
+        muscle_names = exercise['muscles']
         
-        # Legs
-        # Barbell Squats
-        {"base": "Barbell Squat", "name": "Barbell Squat", "description": "Barbell Squat", "muscle": ["Legs", "Quads", "Glutes", "Hamstrings"], "equipment": ["Barbell"], "movement_type": ["compound", "push"]},
-        # Smith Squats
-        {"base": "Smith Squat", "name": "Smith Squat", "description": "Smith Squat", "muscle": ["Legs", "Quads", "Glutes", "Hamstrings"], "equipment": ["Smith"], "movement_type": ["isolation", "push"]},
-        # Hack Squats
-        {"base": "Hack Squat", "name": "Hack Squat", "description": "Hack Squat", "muscle": ["Legs", "Quads", "Glutes", "Hamstrings"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # Pendulum Squats
-        {"base": "Pendulum Squat", "name": "Pendulum Squat", "description": "Pendulum Squat", "muscle": ["Legs", "Quads", "Glutes", "Hamstrings"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # Leg Press
-        {"base": "Leg Press", "name": "Leg Press", "description": "Leg Press", "muscle": ["Legs", "Quads", "Glutes", "Hamstrings"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        {"base": "Leg Press", "name": "Single Leg Press", "description": "Single Leg Press", "muscle": ["Legs", "Quads", "Glutes", "Hamstrings"], "equipment": ["Machine"], "movement_type": ["isolation", "push"], "is_single_arm": True},
-        # Barbell RDLs
-        {"base": "Barbell RDL", "name": "Barbell RDL", "description": "Barbell RDL", "muscle": ["Legs", "Glutes", "Hamstrings"], "equipment": ["Barbell"], "movement_type": ["compound", "pull"]},
-        # Smith RDLs
-        {"base": "Smith RDL", "name": "Smith RDL", "description": "Smith RDL", "muscle": ["Legs", "Glutes", "Hamstrings"], "equipment": ["Smith"], "movement_type": ["isolation", "pull"]},
-        # Dumbbell RDLs
-        {"base": "Dumbbell RDL", "name": "Dumbbell RDL", "description": "Dumbbell RDL", "muscle": ["Legs", "Glutes", "Hamstrings"], "equipment": ["Dumbbell"], "movement_type": ["isolation", "pull"]},
-        # Machine RDLs
-        {"base": "Machine RDL", "name": "Machine RDL", "description": "Machine RDL", "muscle": ["Legs", "Glutes", "Hamstrings"], "equipment": ["Machine"], "movement_type": ["isolation", "pull"]},
-        # Leg Curls
-        {"base": "Leg Curl", "name": "Leg Curl", "description": "Leg Curl", "muscle": ["Legs", "Hamstrings"], "equipment": ["Machine"], "movement_type": ["isolation", "pull"]},
-        {"base": "Leg Curl", "name": "Single Leg Curl", "description": "Single Leg Curl", "muscle": ["Legs", "Hamstrings"], "equipment": ["Machine"], "movement_type": ["isolation", "pull"], "is_single_arm": True},
-        # Leg Extensions
-        {"base": "Leg Extension", "name": "Leg Extension", "description": "Leg Extension", "muscle": ["Legs", "Quads"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        {"base": "Leg Extension", "name": "Single Leg Extension", "description": "Single Leg Extension", "muscle": ["Legs", "Quads"], "equipment": ["Machine"], "movement_type": ["isolation", "push"], "is_single_arm": True},
-        # Calf Raises
-        {"base": "Calf Raise", "name": "Calf Raise", "description": "Calf Raise", "muscle": ["Legs", "Calves"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # Bulgarian Split Squats
-        {"base": "Bulgarian Split Squat", "name": "Bulgarian Split Squat", "description": "Single Leg Bulgarian Split Squat", "muscle": ["Legs", "Quads", "Glutes"], "equipment": ["Dumbbell", "Bench"], "movement_type": ["isolation", "push"], "is_single_arm": True},
-        # Sissy Squats and Hack Squat Sissy Squats
-        {"base": "Sissy Squat", "name": "Sissy Squat", "description": "Sissy Squat", "muscle": ["Legs", "Quads"], "equipment": ["Bodyweight"], "movement_type": ["isolation", "push"]},
-        {"base": "Sissy Squat", "name": "Hack Squat Sissy Squat", "description": "Hack Squat Sissy Squat", "muscle": ["Legs", "Quads"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # Leg Abductions
-        {"base": "Leg Abduction", "name": "Leg Abduction", "description": "Leg Abduction", "muscle": ["Legs", "Glutes"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-        # Leg Adductions
-        {"base": "Leg Adduction", "name": "Leg Adduction", "description": "Leg Adduction", "muscle": ["Legs", "Adductors"], "equipment": ["Machine"], "movement_type": ["isolation", "push"]},
-    ]   
-
-    base_exercise_objs = {}
-
-    for ex in exercises:
-        base_name = ex["base"]
-        if base_name not in base_exercise_objs:
-            base_exercise_objs[base_name] = BaseExercise.objects.create(name=base_name)
-
-        equipment_names = ex["equipment"]
-        if isinstance(equipment_names, str):
-            equipment_names = [equipment_names]
-
-        movement_type_names = ex.get("movement_type", [])
-        if isinstance(movement_type_names, str):
-            movement_type_names = [movement_type_names]
-
-        muscle_group_names = ex["muscle"]
-        if isinstance(muscle_group_names, str):
-            muscle_group_names = [muscle_group_names]
-            
-        exercise = Exercise.objects.create(
-            base = base_exercise_objs[base_name],
-            name= ex["name"],
-            description = ex["description"],
-            is_single_arm = ex.get("is_single_arm", False),
-            grip_type = ex.get("grip_type"),
-            form_note = ex.get("form_note"),
+        # Create or get BaseExercise
+        if base_name not in created_base_exercises:
+            base_exercise, created = BaseExercise.objects.get_or_create(name=base_name)
+            # Set muscle groups for the base exercise
+            base_exercise.muscle_group.set([muscle_objs[m] for m in muscle_names])
+            base_exercise.save()
+            created_base_exercises[base_name] = base_exercise
+        else:
+            base_exercise = created_base_exercises[base_name]
+        
+        # Create Exercise object (specific implementation with equipment)
+        exercise_obj, created = Exercise.objects.get_or_create(
+            base_exercise=base_exercise,
+            name=exercise['name'],
+            defaults={
+                'notes': exercise['notes']
+            }
         )
-        exercise.equipment.set([equipment_objs[e] for e in equipment_names])
-        exercise.muscle_group.set([muscle_group_objs[m] for m in muscle_group_names])
-        exercise.movement_type.set([movement_type_objs[mt] for mt in movement_type_names])
-
-    print("Seed data successfully inserted.")
-
+        
+        # Set muscle groups and equipment for the specific exercise
+        exercise_obj.muscle_group.set([muscle_objs[m] for m in muscle_names])
+        exercise_obj.equipment.set([equipment_objs[e] for e in exercise['equipment']])
+        exercise_obj.save()
+    
+    print(f"Created {len(created_base_exercises)} base exercises and {len(exercises)} specific exercises successfully!")
 
 @transaction.atomic
 def clear_data():
-    from .models import MuscleGroup, Equipment, Exercise, CalorieEntry, DailyLog, Workout, MovementType
-
-    MuscleGroup.objects.all().delete()
+    from .models import BaseMuscle, Muscle, Equipment, BaseExercise
+    BaseMuscle.objects.all().delete()
+    Muscle.objects.all().delete()
     Equipment.objects.all().delete()
-    Exercise.objects.all().delete()
-    CalorieEntry.objects.all().delete()
-    DailyLog.objects.all().delete()
-    Workout.objects.all().delete()
-    MovementType.objects.all().delete()
-
+    BaseExercise.objects.all().delete()
     print("All data deleted")

@@ -63,16 +63,21 @@
 <body>
     <div class="hero">
         <h1>Welcome to Workout Tracker</h1>
+        <div style="position: absolute; top: 20px; right: 20px;">
+            <a href="{% url 'logout' %}" style="color: #f0f0f0; text-decoration: none; background-color: #333; padding: 8px 16px; border-radius: 4px;">Logout</a>
+        </div>
     </div>
 
     <div class="container">
-        <h2>Today’s Nutrition Summary</h2>
+        <h2>Today's Nutrition Summary</h2>
         <p><strong>Total Calories:</strong> {{ total_calories }} Cal</p>
         <p><strong>Total Protein:</strong> {{ total_protein }} g protein</p>
+        <p><strong>Total Carbs:</strong> {{ total_carbs }} g carbs</p>
+        <p><strong>Total Fats:</strong> {{ total_fats }} g fats</p>
 
-        <h2>What would you like to do?</h2>
-        <a href="{% url 'select_existing_workout' %}">Log Workout</a>
-        <a href="{% url 'select_existing_meal' %}">Log Meal</a>
+        <h2>What are we doing today?</h2>
+        <a href="{% url 'create_workout' %}">Log Workout</a>
+        <a href="{% url 'log_meal_entry' %}">Log Meal</a>
         <a href="{% url 'calendar' %}">View Calendar</a>
     </div>
 </body>
