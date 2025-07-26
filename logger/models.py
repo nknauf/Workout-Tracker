@@ -48,6 +48,7 @@ class Exercise(models.Model):
 
     def __str__(self):
         return self.name
+        
 
     def save(self, *args, **kwargs):
         if not self.name and self.base_exercise:
@@ -55,72 +56,6 @@ class Exercise(models.Model):
         super().save(*args, **kwargs)
 
 # --- Drop Set Models ---
-
-class DropSetExercise(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=200, unique=True)
-    base_exercise = models.ForeignKey(BaseExercise, on_delete=models.CASCADE, related_name='drop_sets')
-    description = models.TextField(blank=True)
-    instructions = models.TextField(blank=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        ordering = ['name']
-
-class DropSetRound(models.Model):
-    drop_set = models.ForeignKey(DropSetExercise, on_delete=models.CASCADE, related_name='rounds')
-    round_number = models.PositiveIntegerField()
-    weight = models.DecimalField(max_digits=6, decimal_places=2)
-    reps = models.PositiveIntegerField()
-    rest_time_seconds = models.PositiveIntegerField(default=0, help_text="Rest time before next round")
-    notes = models.TextField(blank=True)
-
-    class Meta:
-        ordering = ['round_number']
-        unique_together = ['drop_set', 'round_number']
-
-    def __str__(self):
-        return f"{self.drop_set.name} - Round {self.round_number}"
-
-# --- Super Set Models ---
-
-class SuperSetExercise(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=200, unique=True)
-    description = models.TextField(blank=True)
-    instructions = models.TextField(blank=True)
-    is_active = models.BooleanField(default=True)
-    rest_time_between_sets = models.PositiveIntegerField(default=60, help_text="Rest time in seconds between super sets")
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.name
-
-    class Meta:
-        ordering = ['name']
-
-class SuperSetExerciseItem(models.Model):
-    super_set = models.ForeignKey(SuperSetExercise, on_delete=models.CASCADE, related_name='exercises')
-    base_exercise = models.ForeignKey(BaseExercise, on_delete=models.CASCADE)
-    order = models.PositiveIntegerField()
-    sets = models.PositiveIntegerField(default=3)
-    reps = models.PositiveIntegerField(default=10)
-    weight = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
-    rest_time_seconds = models.PositiveIntegerField(default=0, help_text="Rest time after this exercise")
-    notes = models.TextField(blank=True)
-
-    class Meta:
-        ordering = ['order']
-        unique_together = ['super_set', 'order']
-
-    def __str__(self):
-        return f"{self.super_set.name} - {self.base_exercise.name} (Order {self.order})"
 
 # --- Meal Entry ---
 
@@ -143,18 +78,58 @@ class WorkoutExerciseItem(models.Model):
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
-    workout = models.ForeignKey('Workout', on_delete=models.CASCADE, related_name='items')
+    workout = models.ForeignKey('Workout', on_delete=models.CASCADE, null=True, related_name='exercise_items')
+    template = models.ForeignKey('WorkoutTemplate', on_delete=models.CASCADE, null=True, related_name='exercise_items')
     order = models.PositiveIntegerField(default=0)
+    working_sets = models.PositiveIntegerField(default=0)
+    max_weight = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    max_weight_reps = models.PositiveIntegerField(default=0)
+    notes = models.TextField(blank=True)
 
     class Meta:
         ordering = ['order']
         unique_together = ['workout', 'order']
 
+
 class Workout(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
-    items = GenericRelation(WorkoutExerciseItem, related_query_name='workout')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def get_exercises(self):
+        """Get all exercises in this workout in order"""
+        return [item.content_object for item in self.exercise_items.all()]
+    
+    def add_exercise(self, exercise):
+        """Add an exercise to the workout"""
+        next_order = self.exercise_items.count()
+        WorkoutExerciseItem.objects.create(
+            workout=self,
+            content_type=ContentType.objects.get_for_model(exercise),
+            object_id=exercise.id,
+            order=next_order
+        )
+    
+    def remove_exercise(self, exercise):
+        """Remove an exercise from the workout"""
+        exercise_type = ContentType.objects.get_for_model(exercise)
+        item = self.exercise_items.filter(
+            content_type=exercise_type,
+            object_id=exercise.id
+        ).first()
+        if item:
+            item.delete()
+            self.reorder_items()
+
+    def reorder_items(self):
+        """Reorder all items to ensure sequential order"""
+        items = self.exercise_items.all()
+        for index, item in enumerate(items):
+            item.order = index
+            item.save()
 
     def __str__(self):
         return self.name
@@ -165,6 +140,7 @@ class DailyLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField()
     workouts = models.ManyToManyField(Workout, blank=True, related_name='daily_logs')
+    workout_templates = models.ManyToManyField('WorkoutTemplate', blank=True, related_name='daily_logs')
     meals = models.ManyToManyField(MealEntry, blank=True, related_name='daily_logs')
 
     def __str__(self):
@@ -175,8 +151,42 @@ class DailyLog(models.Model):
 class WorkoutTemplate(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
-    items = GenericRelation(WorkoutExerciseItem, related_query_name='workout_template')
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def get_exercises(self):
+        """Get all exercises in this workout in order"""
+        return [item.content_object for item in self.exercise_items.all()]
+    
+    def add_exercise(self, exercise):
+        """Add an exercise to the workout"""
+        next_order = self.exercise_items.count()
+        WorkoutExerciseItem.objects.create(
+            workout=self,
+            content_type=ContentType.objects.get_for_model(exercise),
+            object_id=exercise.id,
+            order=next_order
+        )
+    
+    def remove_exercise(self, exercise):
+        """Remove an exercise from the workout"""
+        exercise_type = ContentType.objects.get_for_model(exercise)
+        item = self.exercise_items.filter(
+            content_type=exercise_type,
+            object_id=exercise.id
+        ).first()
+        if item:
+            item.delete()
+            self.reorder_items()
+
+    def reorder_items(self):
+        """Reorder all items to ensure sequential order"""
+        items = self.exercise_items.all()
+        for index, item in enumerate(items):
+            item.order = index
+            item.save()
 
     def __str__(self):
         return self.name

@@ -1,648 +1,366 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{% if edit_mode %}Edit{% else %}Create{% endif %} Workout</title>
+    <title>Create Workout</title>
     <style>
-        body {
-            background-color: #0d0d0d;
-            color: #f0f0f0;
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-        h1, h3 {
-            text-align: center;
-            color: #fff;
-        }
-        .form-section {
-            background: #1e1e1e;
-            padding: 25px;
-            border-radius: 12px;
-            margin: 20px 0;
-            border: 2px solid #333;
-        }
-        .form-section h3 {
-            margin-top: 0;
-            color: #007bff;
-            border-bottom: 2px solid #333;
-            padding-bottom: 10px;
-        }
-        label {
-            display: block;
-            margin: 8px 0;
-            color: #ccc;
-            font-weight: bold;
-        }
-        input[type="text"], input[type="number"] {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 16px;
-            background: #2a2a2a;
-            border: 1px solid #444;
-            border-radius: 6px;
-            color: white;
-            font-size: 14px;
-        }
-        input[type="text"]:focus, input[type="number"]:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
-        }
-        button {
-            padding: 12px 24px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            margin: 10px 5px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .btn-secondary {
-            background: #6c757d;
-        }
-        .btn-secondary:hover {
-            background: #545b62;
-        }
-        .btn-success {
-            background: #28a745;
-        }
-        .btn-success:hover {
-            background: #1e7e34;
-        }
-        .btn-danger {
-            background: #dc3545;
-        }
-        .btn-danger:hover {
-            background: #c82333;
-        }
-        .btn-warning {
-            background: #ffc107;
-            color: #212529;
-        }
-        .btn-warning:hover {
-            background: #e0a800;
-        }
-        .btn-info {
-            background: #17a2b8;
-        }
-        .btn-info:hover {
-            background: #138496;
-        }
-        .btn-small {
-            padding: 8px 16px;
-            font-size: 12px;
-            margin: 2px;
-        }
-        .filter-section {
-            background: #1e1e1e;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 15px 0;
-        }
-        .filter-row {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-        .filter-group {
-            flex: 1;
-            min-width: 250px;
-        }
-        .filter-group label {
-            margin-bottom: 8px;
-            color: #007bff;
-            font-weight: bold;
-        }
-        .filter-group select {
-            width: 100%;
-            padding: 10px;
-            background: #2a2a2a;
-            border: 1px solid #444;
-            border-radius: 6px;
-            color: white;
-            font-size: 14px;
-        }
-        .filter-group select:focus {
-            outline: none;
-            border-color: #007bff;
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
-        }
-        .muscle-group-container {
-            background: #2a2a2a;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid #444;
-        }
-        .muscle-group-header {
-            color: #007bff;
-            font-weight: bold;
-            margin-bottom: 10px;
-            font-size: 16px;
-            border-bottom: 1px solid #444;
-            padding-bottom: 5px;
-        }
-        .muscle-checkboxes {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-        }
-        .muscle-checkbox-item {
-            background: #1e1e1e;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #444;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-        }
-        .muscle-checkbox-item:hover {
-            background: #333;
-            border-color: #007bff;
-        }
-        .muscle-checkbox-item input[type="checkbox"] {
-            margin-right: 8px;
-            transform: scale(1.2);
-        }
-        .muscle-checkbox-item label {
-            margin: 0;
-            cursor: pointer;
-            font-weight: normal;
-            color: #ccc;
-        }
-        .equipment-checkboxes {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-        }
-        .equipment-checkbox-item {
-            background: #1e1e1e;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #444;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-        }
-        .equipment-checkbox-item:hover {
-            background: #333;
-            border-color: #007bff;
-        }
-        .equipment-checkbox-item input[type="checkbox"] {
-            margin-right: 8px;
-            transform: scale(1.2);
-        }
-        .equipment-checkbox-item label {
-            margin: 0;
-            cursor: pointer;
-            font-weight: normal;
-            color: #ccc;
-        }
-        .apply-filters {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .exercise-list {
-            background: #2a2a2a;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-        }
-        .exercise-item {
-            background: #1e1e1e;
-            padding: 15px;
-            margin: 8px 0;
-            border-radius: 6px;
-            border-left: 4px solid #007bff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .exercise-info {
-            flex: 1;
-        }
-        .exercise-name {
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 5px;
-        }
-        .exercise-meta {
-            color: #aaa;
-            font-size: 0.9em;
-        }
-        .exercise-actions {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-        .selected-item {
-            background: #1e1e1e;
-            padding: 15px;
-            margin: 8px 0;
-            border-radius: 6px;
-            border-left: 4px solid #28a745;
-        }
-        .selected-item.superset-candidate {
-            border-left-color: #ffc107;
-            background: #2a2a1e;
-        }
-        .selected-item.dropset {
-            border-left-color: #dc3545;
-        }
-        .selected-item.superset {
-            border-left-color: #17a2b8;
-        }
-        .selected-item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        .selected-item-actions {
-            display: flex;
-            gap: 8px;
-        }
-        .save-options {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        .back-link {
-            text-align: center;
-            margin-top: 30px;
-        }
-        .back-link a {
-            color: #007bff;
-            text-decoration: none;
-            font-size: 16px;
-        }
-        .back-link a:hover {
-            text-decoration: underline;
-        }
-        .no-exercises {
-            color: #888;
-            font-style: italic;
-            text-align: center;
-            padding: 20px;
-        }
-        .superset-selection {
-            background: #2a2a1e;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 15px 0;
-            border: 2px solid #ffc107;
-        }
-        .superset-selection h4 {
-            color: #ffc107;
-            margin-bottom: 10px;
-        }
-        .superset-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 15px;
-        }
-        .selection-info {
-            background: #2a2a2a;
-            padding: 10px;
-            border-radius: 4px;
-            margin-bottom: 15px;
-            color: #ccc;
-            text-align: center;
-        }
-        .workout-name-form {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .workout-name-form input[type="text"] {
-            flex: 1;
-            margin-bottom: 0;
-        }
-        .exercise-type-badge {
-            background: #28a745;
-            color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            margin-right: 8px;
-        }
-        .exercise-type-badge.dropset {
-            background: #dc3545;
-        }
-        .exercise-type-badge.superset {
-            background: #17a2b8;
-        }
-        .filter-summary {
-            background: #2a2a2a;
-            padding: 10px 15px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            color: #ccc;
-            font-size: 14px;
-        }
-        .filter-summary strong {
-            color: #007bff;
+        body { background-color: #0d0d0d; color: #f0f0f0; font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1, h3 { text-align: center; color: #fff; }
+        
+        /* Main layout - left and right columns */
+        .main-layout { display: flex; gap: 30px; margin-top: 20px; }
+        .left-column { flex: 2; }
+        .right-column { flex: 1; min-width: 350px; }
+        
+        .form-section { background: #1e1e1e; padding: 25px; border-radius: 12px; margin: 20px 0; border: 2px solid #333; }
+        .form-section h3 { margin-top: 0; color: #007bff; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        label { display: block; margin: 8px 0; color: #ccc; font-weight: bold; }
+        input[type="text"], select { width: 100%; padding: 12px; margin-bottom: 16px; background: #2a2a2a; border: 1px solid #444; border-radius: 6px; color: white; font-size: 14px; }
+        input[type="text"]:focus, select:focus { outline: none; border-color: #007bff; box-shadow: 0 0 5px rgba(0,123,255,0.3); }
+        
+        /* Checkbox styles */
+        .form-check { margin: 16px 0; display: flex; align-items: center; }
+        .form-check input[type="checkbox"] { margin-right: 10px; transform: scale(1.3); cursor: pointer; }
+        .form-check label { margin: 0; cursor: pointer; color: #ccc; font-weight: normal; }
+        
+        button { padding: 12px 24px; background: #007bff; color: white; border: none; border-radius: 6px; margin: 10px 5px; cursor: pointer; font-size: 14px; transition: background-color 0.3s ease; }
+        button:hover { background-color: #0056b3; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #1e7e34; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-small { padding: 8px 16px; font-size: 12px; }
+        .filter-section { background: #1e1e1e; padding: 20px; border-radius: 8px; margin: 15px 0; }
+        .filter-group { margin-bottom: 20px; }
+        
+        /* Badge styles for templates */
+        .badge { background: #17a2b8; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-left: 8px; }
+        .badge.template { background: #17a2b8; }
+        
+        /* Button group styles */
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        
+        /* Dropdown Styles */
+        .dropdown-container { background: #2a2a2a; border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #444; }
+        .dropdown-header { color: #007bff; font-weight: bold; margin-bottom: 10px; font-size: 16px; border-bottom: 1px solid #444; padding-bottom: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .dropdown-arrow { transition: transform 0.3s ease; }
+        .dropdown-content { display: none; margin-top: 10px; }
+        .dropdown-content.show { display: block; }
+        .dropdown-content.show .dropdown-arrow { transform: rotate(180deg); }
+        
+        .muscle-checkboxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+        .muscle-checkbox-item { background: #1e1e1e; padding: 8px 12px; border-radius: 6px; border: 1px solid #444; cursor: pointer; display: flex; align-items: center; }
+        .muscle-checkbox-item input[type="checkbox"] { margin-right: 8px; transform: scale(1.2); }
+        .equipment-checkboxes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .equipment-checkbox-item { background: #1e1e1e; padding: 8px 12px; border-radius: 6px; border: 1px solid #444; cursor: pointer; display: flex; align-items: center; }
+        .equipment-checkbox-item input[type="checkbox"] { margin-right: 8px; transform: scale(1.2); }
+        .apply-filters { text-align: center; margin-top: 20px; }
+        .exercise-list { background: #2a2a2a; border-radius: 8px; padding: 15px; margin: 15px 0; }
+        .exercise-item { background: #1e1e1e; padding: 15px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #007bff; display: flex; justify-content: space-between; align-items: center; }
+        .exercise-info { flex: 1; }
+        .exercise-name { font-weight: bold; color: #fff; margin-bottom: 5px; }
+        .exercise-meta { color: #aaa; font-size: 0.9em; }
+        .selected-item { background: #1e1e1e; padding: 15px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #28a745; }
+        .selected-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .selected-item-actions { display: flex; gap: 8px; }
+        .save-options { display: flex; gap: 15px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+        .back-link { text-align: center; margin-top: 30px; }
+        .back-link a { color: #007bff; text-decoration: none; font-size: 16px; }
+        .back-link a:hover { text-decoration: underline; }
+        .no-exercises { color: #888; font-style: italic; text-align: center; padding: 20px; }
+        .workout-name-form { display: flex; gap: 10px; align-items: center; }
+        .workout-name-form input[type="text"] { flex: 1; margin-bottom: 0; }
+        
+        /* Exercise dropdown styles */
+        .exercise-dropdown-container { background: #2a2a2a; border-radius: 8px; padding: 15px; margin-bottom: 15px; border: 1px solid #444; }
+        .exercise-dropdown-header { color: #007bff; font-weight: bold; margin-bottom: 10px; font-size: 16px; border-bottom: 1px solid #444; padding-bottom: 5px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .exercise-dropdown-content { display: none; margin-top: 10px; }
+        .exercise-dropdown-content.show { display: block; }
+        
+        /* Saved items styles - Updated to match view logic */
+        .saved-item { background: #2a2a2a; padding: 15px; margin: 10px 0; border-radius: 8px; border: 1px solid #444; display: flex; flex-direction: column; transition: all 0.3s ease; }
+        .saved-item:hover { border-color: #007bff; background: #333; }
+        .saved-item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .saved-item-name { font-weight: bold; color: #fff; margin-bottom: 5px; display: flex; align-items: center; }
+        .saved-item-meta { color: #aaa; font-size: 0.9em; }
+        .saved-item-exercises { color: #bbb; font-size: 0.85em; margin-top: 8px; margin-bottom: 12px; }
+        .saved-item-actions { display: flex; gap: 8px; }
+        
+        /* Right column specific styles */
+        .right-column .form-section { margin: 0 0 20px 0; position: sticky; top: 20px; }
+        
+        @media (max-width: 1024px) {
+            .main-layout { flex-direction: column; }
+            .right-column { order: -1; }
+            .right-column .form-section { position: static; }
+            .save-options { flex-direction: column; }
+            .button-group { flex-direction: column; }
+            .saved-item-header { flex-direction: column; gap: 10px; }
+            .saved-item-actions { flex-direction: column; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏋️ {% if edit_mode %}Edit{% else %}Create{% endif %} Your Workout</h1>
+        <h1>🏋️ Create Your Workout</h1>
         
-        <!-- Workout Name -->
-        <div class="form-section">
-            <h3>Workout Name</h3>
-            <form method="post" class="workout-name-form">
-                {% csrf_token %}
-                <input type="text" name="workout_name" value="{{ workout_name }}" placeholder="Enter workout name..." required>
-                <button type="submit" name="update_name" class="btn btn-primary">Update Name</button>
-            </form>
-        </div>
+        <div class="main-layout">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Workout Name -->
+                <div class="form-section">
+                    <h3>Workout Name</h3>
+                    <form method="post" class="workout-name-form">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                        <input type="text" name="workout_name" value="{{ workout_name }}" placeholder="Enter workout name..." required>
+                        <button type="submit" name="update_name" class="btn btn-success">Update Name</button>
+                    </form>
+                </div>
 
-        <!-- Filters -->
-        <div class="form-section">
-            <h3>🔍 Filter Exercises</h3>
-            <form method="get" class="filter-section">
-                <input type="hidden" name="workout_name" value="{{ workout_name }}">
-                
-                <!-- Muscle Groups by BaseMuscle -->
-                <div class="filter-group">
-                    <label>Muscle Groups:</label>
-                    {% regroup muscles by base_muscle as muscle_list %}
-                    {% for base_muscle in muscle_list %}
-                        <div class="muscle-group-container">
-                            <div class="muscle-group-header">{{ base_muscle.grouper.name }}</div>
-                            <div class="muscle-checkboxes">
-                                {% for muscle in base_muscle.list %}
-                                    <div class="muscle-checkbox-item">
-                                        <input type="checkbox" name="muscle_group" value="{{ muscle.id }}" 
-                                               id="muscle_{{ muscle.id }}" 
-                                               {% if muscle.id in selected_muscles %}checked{% endif %}>
-                                        <label for="muscle_{{ muscle.id }}">{{ muscle.name }}</label>
+                <!-- Saved Templates - Updated to match view logic -->
+                <div class="form-section">
+                    <h3>📋 Load Saved Templates</h3>
+                    {% if saved_items %}
+                        <form method="post">
+                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                            {% for item in saved_items %}
+                                <div class="saved-item">
+                                    <div class="saved-item-header">
+                                        <div>
+                                            <div class="saved-item-name">
+                                                {{ item.name }}
+                                                <span class="badge template">Template</span>
+                                            </div>
+                                            <div class="saved-item-meta">
+                                                Created: {{ item.created_at|date:"M j, Y" }} | 
+                                                Exercises: {{ item.exercise_count }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="saved-item-exercises">
+                                        {{ item.exercise_names|truncatechars:100 }}
+                                    </div>
+                                    <div class="saved-item-actions">
+                                        <button type="submit" name="load_template" value="{{ item.id }}" class="btn btn-success btn-small">
+                                            Load Template
+                                        </button>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </form>
+                    {% else %}
+                        <div class="no-exercises">No saved templates found.</div>
+                    {% endif %}
+                </div>
+
+                <!-- Filters -->
+                <div class="form-section">
+                    <h3>🔍 Filter Exercises</h3>
+                    <form method="get" class="filter-section">
+                        <input type="hidden" name="workout_name" value="{{ workout_name }}">
+                        
+                        <!-- Muscle Groups with Dropdown -->
+                        <div class="filter-group">
+                            <label>Muscle Groups:</label>
+                            {% regroup muscles by base_muscle as muscle_list %}
+                            {% for base_muscle in muscle_list %}
+                                <div class="dropdown-container">
+                                    <div class="dropdown-header" onclick="toggleDropdown(this)">
+                                        {{ base_muscle.grouper.name }}
+                                        <span class="dropdown-arrow">▼</span>
+                                    </div>
+                                    <div class="dropdown-content">
+                                        <div class="muscle-checkboxes">
+                                            {% for muscle in base_muscle.list %}
+                                                <div class="muscle-checkbox-item">
+                                                    <input type="checkbox" name="muscle_group" value="{{ muscle.id }}" id="muscle_{{ muscle.id }}" {% if muscle.id in selected_muscles %}checked{% endif %}>
+                                                    <label for="muscle_{{ muscle.id }}">{{ muscle.name }}</label>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Equipment -->
+                        <div class="filter-group">
+                            <label>Equipment:</label>
+                            <div class="equipment-checkboxes">
+                                {% for equip in equipment %}
+                                    <div class="equipment-checkbox-item">
+                                        <input type="checkbox" name="equipment" value="{{ equip.id }}" id="equipment_{{ equip.id }}" {% if equip.id in selected_equipment %}checked{% endif %}>
+                                        <label for="equipment_{{ equip.id }}">{{ equip.name }}</label>
                                     </div>
                                 {% endfor %}
                             </div>
                         </div>
-                    {% endfor %}
-                </div>
 
-                <!-- Equipment -->
-                <div class="filter-group">
-                    <label>Equipment:</label>
-                    <div class="equipment-checkboxes">
-                        {% for equip in equipment %}
-                            <div class="equipment-checkbox-item">
-                                <input type="checkbox" name="equipment" value="{{ equip.id }}" 
-                                       id="equipment_{{ equip.id }}" 
-                                       {% if equip.id in selected_equipment %}checked{% endif %}>
-                                <label for="equipment_{{ equip.id }}">{{ equip.name }}</label>
+                        <!-- Filter Summary -->
+                        {% if selected_muscles or selected_equipment %}
+                            <div class="filter-summary">
+                                <strong>Active Filters:</strong>
+                                {% if selected_muscles %}
+                                    Muscles ({{ selected_muscles|length }})
+                                {% endif %}
+                                {% if selected_equipment %}
+                                    {% if selected_muscles %}, {% endif %}Equipment ({{ selected_equipment|length }})
+                                {% endif %}
                             </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
-                <!-- Filter Summary -->
-                {% if selected_muscles or selected_equipment %}
-                    <div class="filter-summary">
-                        <strong>Active Filters:</strong>
-                        {% if selected_muscles %}
-                            Muscles: {% for muscle_id in selected_muscles %}{% for muscle in muscles %}{% if muscle.id == muscle_id %}{{ muscle.base_muscle.name }} - {{ muscle.name }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}{% endfor %}
                         {% endif %}
-                        {% if selected_muscles and selected_equipment %} | {% endif %}
-                        {% if selected_equipment %}
-                            Equipment: {% for equip_id in selected_equipment %}{% for equip in equipment %}{% if equip.id == equip_id %}{{ equip.name }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}{% endfor %}
-                        {% endif %}
-                    </div>
-                {% endif %}
 
-                <div class="apply-filters">
-                    <button type="submit" class="btn btn-primary">Apply Filters</button>
-                    <a href="{% url 'create_workout' %}?workout_name={{ workout_name|urlencode }}" class="btn btn-secondary">Clear Filters</a>
-                </div>
-            </form>
-        </div>
-
-        <!-- Available Exercises -->
-        <div class="form-section">
-            <h3>💪 Available Exercises</h3>
-            {% if available_exercises %}
-                <div class="exercise-list">
-                    {% for exercise in available_exercises %}
-                        <div class="exercise-item">
-                            <div class="exercise-info">
-                                <div class="exercise-name">{{ exercise.name }}</div>
-                                <div class="exercise-meta">
-                                    Muscles: {% for muscle in exercise.muscle_group.all %}{{ muscle.base_muscle.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                                    | Equipment: {% for equip in exercise.equipment.all %}{{ equip.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                                </div>
-                            </div>
-                            <div class="exercise-actions">
-                                <form method="post" style="display: inline;">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
-                                    <button type="submit" name="add_exercise" class="btn btn-success btn-small">Add to Workout</button>
-                                </form>
-                            </div>
+                        <div class="apply-filters">
+                            <button type="submit" class="btn btn-success">Apply Filters</button>
+                            <a href="?workout_name={{ workout_name|urlencode }}" class="btn btn-secondary">Clear Filters</a>
                         </div>
-                    {% endfor %}
+                    </form>
                 </div>
-            {% else %}
-                <div class="no-exercises">
-                    {% if selected_muscles or selected_equipment %}
-                        No exercises match your current filters. Try adjusting your filters.
+
+                <!-- Available Exercises with Dropdown by Base Exercise -->
+                <div class="form-section">
+                    <h3>💪 Available Exercises</h3>
+                    {% if available_exercises %}
+                        <div class="exercise-list">
+                            {% regroup available_exercises by base_exercise as exercise_list %}
+                            {% for base_exercise in exercise_list %}
+                                <div class="exercise-dropdown-container">
+                                    <div class="exercise-dropdown-header" onclick="toggleExerciseDropdown(this)">
+                                        {{ base_exercise.grouper.name }}
+                                        <span class="dropdown-arrow">▼</span>
+                                    </div>
+                                    <div class="exercise-dropdown-content">
+                                        {% for exercise in base_exercise.list %}
+                                            <div class="exercise-item">
+                                                <div class="exercise-info">
+                                                    <div class="exercise-name">{{ exercise.name }}</div>
+                                                    <div class="exercise-meta">Muscles: {{ exercise.muscle_group.all|join:", " }} | Equipment: {{ exercise.equipment.all|join:", " }}</div>
+                                                </div>
+                                                <div class="exercise-actions">
+                                                    <form method="post" style="display:inline;">
+                                                        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                                                        <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
+                                                        <input type="hidden" name="workout_name" value="{{ workout_name }}">
+                                                        <button type="submit" name="add_exercise" class="btn btn-success btn-small">Add</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
                     {% else %}
-                        No exercises available. Create some exercises first.
+                        <div class="no-exercises">No exercises match your current filters.</div>
                     {% endif %}
                 </div>
-            {% endif %}
-        </div>
-
-        <!-- Superset Selection Mode -->
-        {% if request.session.superset_selection_mode %}
-            <div class="superset-selection">
-                <h4>⚡ Creating Superset</h4>
-                <div class="selection-info">
-                    Select at least one more exercise to create a superset. Currently selected: {{ request.session.superset_candidates|length }} exercise(s)
-                </div>
-                <div class="superset-actions">
-                    <form method="post" style="display: inline;">
-                        {% csrf_token %}
-                        <button type="submit" name="create_superset" class="btn btn-success">Create Superset</button>
-                    </form>
-                    <form method="post" style="display: inline;">
-                        {% csrf_token %}
-                        <button type="submit" name="cancel_superset" class="btn btn-secondary">Cancel</button>
-                    </form>
-                </div>
             </div>
-        {% endif %}
 
-        <!-- Selected Items -->
-        <div class="form-section">
-            <h3>✅ Selected Items</h3>
-            <div class="selected-items">
-                <!-- Regular Exercises -->
-                {% if selected_exercises %}
-                    <h4>Regular Exercises:</h4>
-                    {% for exercise in selected_exercises %}
-                        <div class="selected-item {% if exercise.id|stringformat:'s' in request.session.superset_candidates %}superset-candidate{% endif %}">
-                            <div class="selected-item-header">
-                                <div class="exercise-info">
-                                    <div class="exercise-name">
-                                        {% if exercise.id|stringformat:'s' in request.session.superset_candidates %}
-                                            <span class="exercise-type-badge">SUPERSET CANDIDATE</span>
-                                        {% endif %}
-                                        {{ exercise.name }}
-                                    </div>
-                                    <div class="exercise-meta">
-                                        Muscles: {% for muscle in exercise.muscle_group.all %}{{ muscle.base_muscle.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                                    </div>
-                                </div>
-                                <div class="selected-item-actions">
-                                    {% if not request.session.superset_selection_mode %}
-                                        <form method="post" style="display: inline;">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
-                                            <button type="submit" name="make_dropset" class="btn btn-danger btn-small">Make Drop Set</button>
-                                        </form>
-                                        <form method="post" style="display: inline;">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
-                                            <button type="submit" name="start_superset" class="btn btn-info btn-small">Make Superset</button>
-                                        </form>
-                                    {% else %}
-                                        <form method="post" style="display: inline;">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
-                                            {% if exercise.id|stringformat:'s' in request.session.superset_candidates %}
-                                                <button type="submit" name="remove_from_superset" class="btn btn-warning btn-small">Remove from Superset</button>
-                                            {% else %}
-                                                <button type="submit" name="add_to_superset" class="btn btn-warning btn-small">Add to Superset</button>
-                                            {% endif %}
-                                        </form>
-                                    {% endif %}
-                                    <form method="post" style="display: inline;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
-                                        <button type="submit" name="remove_exercise" class="btn btn-danger btn-small">Remove</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-
-                <!-- Drop Sets -->
-                {% if selected_drop_sets %}
-                    <h4>Drop Sets:</h4>
-                    {% for exercise in selected_drop_sets %}
-                        <div class="selected-item dropset">
-                            <div class="selected-item-header">
-                                <div class="exercise-info">
-                                    <div class="exercise-name">
-                                        <span class="exercise-type-badge dropset">DROP SET</span>
-                                        {{ exercise.name }}
-                                    </div>
-                                    <div class="exercise-meta">
-                                        Muscles: {% for muscle in exercise.muscle_group.all %}{{ muscle.base_muscle.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                                    </div>
-                                </div>
-                                <div class="selected-item-actions">
-                                    <form method="post" style="display: inline;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
-                                        <button type="submit" name="dropset_to_exercise" class="btn btn-success btn-small">Make Regular</button>
-                                    </form>
-                                    <form method="post" style="display: inline;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
-                                        <button type="submit" name="remove_dropset" class="btn btn-danger btn-small">Remove</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-
-                <!-- Super Sets -->
-                {% if selected_super_sets %}
-                    <h4>Super Sets:</h4>
-                    {% for exercise in selected_super_sets %}
-                        <div class="selected-item superset">
-                            <div class="selected-item-header">
-                                <div class="exercise-info">
-                                    <div class="exercise-name">
-                                        <span class="exercise-type-badge superset">SUPERSET</span>
-                                        {{ exercise.name }}
-                                    </div>
-                                    <div class="exercise-meta">
-                                        Muscles: {% for muscle in exercise.muscle_group.all %}{{ muscle.base_muscle.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-                                    </div>
-                                </div>
-                                <div class="selected-item-actions">
-                                    <form method="post" style="display: inline;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
-                                        <button type="submit" name="superset_to_exercise" class="btn btn-success btn-small">Make Regular</button>
-                                    </form>
-                                    <form method="post" style="display: inline;">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
-                                        <button type="submit" name="remove_superset" class="btn btn-danger btn-small">Remove</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% endif %}
-
-                {% if not selected_exercises and not selected_drop_sets and not selected_super_sets %}
-                    <div class="no-exercises">No exercises selected yet. Add some exercises from the available list above.</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Save Workout -->
-        {% if selected_exercises or selected_drop_sets or selected_super_sets %}
-            {% if not request.session.superset_selection_mode %}
+            <!-- Right Column -->
+            <div class="right-column">
+                <!-- Selected Exercises -->
                 <div class="form-section">
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="save-options">
-                            <button type="submit" name="save_workout" class="btn btn-success">
-                                {% if edit_mode %}Update{% else %}Save{% endif %} Workout
-                            </button>
-                            <a href="{% url 'home' %}" class="btn btn-secondary">Cancel</a>
+                    <h3>✅ Selected Exercises</h3>
+                    {% if selected_exercises %}
+                        {% for exercise in selected_exercises %}
+                            <div class="selected-item">
+                                <div class="selected-item-header">
+                                    <div class="exercise-info">
+                                        <div class="exercise-name">{{ exercise.name }}</div>
+                                        <div class="exercise-meta">Muscles: {{ exercise.muscle_group.all|join:", " }}</div>
+                                    </div>
+                                    <div class="selected-item-actions">
+                                        <form method="post" style="display:inline;">
+                                            <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                                            <input type="hidden" name="exercise_id" value="{{ exercise.id }}">
+                                            <button type="submit" name="remove_exercise" class="btn btn-danger btn-small">Remove</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="no-exercises">No exercises selected yet.</div>
+                    {% endif %}
+
+                    <!-- Save Workout -->
+                    {% if selected_exercises %}
+                        <div style="margin-top: 20px;">
+                            <form method="post">
+                                <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+                                <input type="hidden" name="workout_name" value="{{ workout_name }}">
+                                
+                                <div class="save-options">
+                                    <button type="submit" name="just_save_workout" class="btn btn-success">
+                                        Save Workout
+                                    </button>
+                                    <button type="submit" name="save_workout_and_template" class="btn btn-success">
+                                        Save Workout + Template
+                                    </button>
+                                    <button type="submit" name="cancel_workout" class="btn btn-secondary">Cancel</button>
+                                </div>
+                            </form>
                         </div>
-                    </form>
+                    {% endif %}
                 </div>
-            {% endif %}
-        {% endif %}
+            </div>
+        </div>
 
         <div class="back-link">
-            <a href="{% url 'home' %}">← Back to Home</a>
+            <a href="/">← Back to Home</a>
         </div>
     </div>
 
     <script>
-        // Auto-submit workout name form on blur
+        // Auto-submit workout name changes
         document.querySelector('input[name="workout_name"]').addEventListener('blur', function() {
-            if (this.value.trim() !== '{{ workout_name }}') {
+            const currentValue = this.value.trim();
+            const originalValue = '{{ workout_name }}';
+            if (currentValue !== originalValue) {
                 this.closest('form').submit();
             }
+        });
+
+        // Toggle dropdown for muscle groups
+        function toggleDropdown(header) {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector('.dropdown-arrow');
+            
+            if (content.classList.contains('show')) {
+                content.classList.remove('show');
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                content.classList.add('show');
+                arrow.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Toggle dropdown for exercise groups
+        function toggleExerciseDropdown(header) {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector('.dropdown-arrow');
+            
+            if (content.classList.contains('show')) {
+                content.classList.remove('show');
+                arrow.style.transform = 'rotate(0deg)';
+            } else {
+                content.classList.add('show');
+                arrow.style.transform = 'rotate(180deg)';
+            }
+        }
+
+        // Auto-expand dropdowns with selected items
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if any muscle groups have selected items and keep them open
+            const muscleContainers = document.querySelectorAll('.dropdown-container');
+            muscleContainers.forEach(container => {
+                const checkedInputs = container.querySelectorAll('input[type="checkbox"]:checked');
+                if (checkedInputs.length > 0) {
+                    const header = container.querySelector('.dropdown-header');
+                    toggleDropdown(header);
+                }
+            });
         });
     </script>
 </body>

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Exercise, Workout, MealEntry, Equipment, Muscle, BaseExercise, DropSetExercise, DropSetRound, SuperSetExercise, SuperSetExerciseItem
+from .models import Exercise, Workout, MealEntry, Equipment, Muscle, BaseExercise
 
 class BaseExerciseForm(forms.ModelForm):
     class Meta:
@@ -23,39 +23,6 @@ class ExerciseForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'rows': 3}),
         }
 
-class DropSetExerciseForm(forms.ModelForm):
-    class Meta:
-        model = DropSetExercise
-        fields = ['name', 'base_exercise', 'description', 'instructions', 'is_active']
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 3}),
-            'instructions': forms.Textarea(attrs={'rows': 5}),
-        }
-
-class DropSetRoundForm(forms.ModelForm):
-    class Meta:
-        model = DropSetRound
-        fields = ['round_number', 'weight', 'reps', 'rest_time_seconds', 'notes']
-        widgets = {
-            'notes': forms.Textarea(attrs={'rows': 2}),
-        }
-
-class SuperSetExerciseForm(forms.ModelForm):
-    class Meta:
-        model = SuperSetExercise
-        fields = ['name', 'description', 'instructions', 'is_active', 'rest_time_between_sets']
-        widgets = {
-            'description': forms.Textarea(attrs={'rows': 3}),
-            'instructions': forms.Textarea(attrs={'rows': 5}),
-        }
-
-class SuperSetExerciseItemForm(forms.ModelForm):
-    class Meta:
-        model = SuperSetExerciseItem
-        fields = ['base_exercise', 'order', 'sets', 'reps', 'weight', 'rest_time_seconds', 'notes']
-        widgets = {
-            'notes': forms.Textarea(attrs={'rows': 2}),
-        }
 
 class WorkoutForm(forms.ModelForm):
     class Meta:

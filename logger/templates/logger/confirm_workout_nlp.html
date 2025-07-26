@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Workout - NLP Engine</title>
+    <style>
+        body {
+            background-color: #0d0d0d;
+            color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        
+        .confidence-indicator {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-left: 4px solid #007acc;
+        }
+        
+        .confidence-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #444;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444, #ffaa00, #44ff44);
+            transition: width 0.3s ease;
+        }
+        
+        .original-text {
+            background-color: #2a2a2a;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-style: italic;
+            color: #ccc;
+            border-left: 4px solid #666;
+        }
+        
+        .workout-summary {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        
+        .workout-name {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #007acc;
+            margin-bottom: 15px;
+        }
+        
+        .exercise-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .exercise-item {
+            background-color: #333;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #007acc;
+        }
+        
+        .exercise-item.unmatched {
+            border-left-color: #ff4444;
+        }
+        
+        .exercise-name {
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .exercise-status {
+            font-size: 0.8em;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: normal;
+        }
+        
+        .status-matched {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .status-unmatched {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .exercise-details {
+            color: #ccc;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .exercise-details span {
+            margin-right: 15px;
+        }
+        
+        .exercise-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .exercise-form input {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            background-color: #444;
+            color: #f0f0f0;
+            font-size: 14px;
+        }
+        
+        .exercise-form input:focus {
+            outline: none;
+            border-color: #007acc;
+        }
+        
+        .missing-exercises {
+            background-color: #2a1a1a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #ff4444;
+        }
+        
+        .missing-exercises h3 {
+            color: #ff4444;
+            margin-top: 0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #555;
+            background-color: #333;
+            color: #f0f0f0;
+            font-size: 16px;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #007acc;
+            box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            margin: 5px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #007acc, #005a9e);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #005a9e, #004080);
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background-color: #555;
+            color: #f0f0f0;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #666;
+        }
+        
+        .btn-warning {
+            background-color: #ffc107;
+            color: #000;
+        }
+        
+        .btn-warning:hover {
+            background-color: #e0a800;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #007acc;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+        
+        .back-link:hover {
+            color: #005a9e;
+        }
+        
+        .edit-section {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 2px solid #007acc;
+        }
+        
+        .edit-section h3 {
+            color: #007acc;
+            margin-top: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .exercise-form {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{% url 'conversational_input' %}" class="back-link">← Back to Input</a>
+        
+        <h1>🏋️ Confirm Your Workout</h1>
+        
+        <div class="confidence-indicator">
+            <strong>Parsing Confidence:</strong> {{ nlp_result.confidence|floatformat:1 }}%
+            <div class="confidence-bar">
+                /* stylelint-disable */
+                <div class="confidence-fill" style="width: {{ nlp_result.confidence|floatformat:0 }}%;"></div>
+            </div>
+        </div>
+        
+        <div class="original-text">
+            <strong>Your input:</strong> "{{ input_text }}"
+        </div>
+        
+        <!-- Edit Workout Form -->
+        <div class="edit-section">
+            <h3>✏️ Edit Workout Details</h3>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="edit_workout">
+                
+                <div class="form-group">
+                    <label for="workout_name">Workout Name:</label>
+                    <input type="text" id="workout_name" name="workout_name" value="{{ nlp_result.workout_name }}" required>
+                </div>
+                
+                <h4>Exercise Details:</h4>
+                {% for exercise in exercises %}
+                    <div class="exercise-item {% if not exercise.db_match %}unmatched{% endif %}">
+                        <div class="exercise-name">
+                            {{ exercise.name }}
+                            <span class="exercise-status {% if exercise.db_match %}status-matched{% else %}status-unmatched{% endif %}">
+                                {% if exercise.db_match %}✅ Found in Database{% else %}❌ Not Found{% endif %}
+                            </span>
+                        </div>
+                        
+                        {% if exercise.db_match %}
+                            <div class="exercise-details">
+                                Database Match: {{ exercise.db_match.name }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="exercise-form">
+                            <input type="number" name="exercise_sets_{{ forloop.counter0 }}" 
+                                   value="{{ exercise.sets|default:'' }}" placeholder="Sets" min="1" max="50">
+                            <input type="number" name="exercise_reps_{{ forloop.counter0 }}" 
+                                   value="{{ exercise.reps|default:'' }}" placeholder="Reps" min="1" max="1000">
+                            <input type="number" name="exercise_weight_{{ forloop.counter0 }}" 
+                                   value="{{ exercise.weight|default:'' }}" placeholder="Weight (lbs)" min="0" max="10000">
+                        </div>
+                    </div>
+                {% endfor %}
+                
+                <div class="button-group">
+                    <button type="submit" class="btn btn-warning">💾 Update Details</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Missing Exercises Warning -->
+        {% if missing_exercises %}
+            <div class="missing-exercises">
+                <h3>⚠️ Missing Exercises</h3>
+                <p>The following exercises were not found in the database:</p>
+                <ul>
+                    {% for exercise in missing_exercises %}
+                        <li>{{ exercise.name }}</li>
+                    {% endfor %}
+                </ul>
+                <p>You can create these exercises automatically or continue without them.</p>
+                
+                <form method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="create_missing">
+                    <button type="submit" class="btn btn-warning">🔧 Create Missing Exercises</button>
+                </form>
+            </div>
+        {% endif %}
+        
+        <!-- Workout Summary -->
+        <div class="workout-summary">
+            <div class="workout-name">{{ nlp_result.workout_name }}</div>
+            
+            {% if exercises %}
+                <ul class="exercise-list">
+                    {% for exercise in exercises %}
+                        <li class="exercise-item {% if not exercise.db_match %}unmatched{% endif %}">
+                            <div class="exercise-name">
+                                {{ exercise.name }}
+                                {% if exercise.db_match %}
+                                    <span class="exercise-status status-matched">✅</span>
+                                {% else %}
+                                    <span class="exercise-status status-unmatched">❌</span>
+                                {% endif %}
+                            </div>
+                            <div class="exercise-details">
+                                {% if exercise.sets %}<span>Sets: {{ exercise.sets }}</span>{% endif %}
+                                {% if exercise.reps %}<span>Reps: {{ exercise.reps }}</span>{% endif %}
+                                {% if exercise.weight %}<span>Weight: {{ exercise.weight }} lbs</span>{% endif %}
+                                {% if exercise.duration %}<span>Duration: {{ exercise.duration }} min</span>{% endif %}
+                                {% if not exercise.db_match %}
+                                    <span style="color: #ff4444;">Not found in database</span>
+                                {% endif %}
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>No exercises found in the input.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="button-group">
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="save_workout">
+                <button type="submit" class="btn btn-success">✅ Save Workout</button>
+            </form>
+            
+            <a href="{% url 'conversational_input' %}" class="btn btn-secondary">🔄 Try Again</a>
+        </div>
+        
+        <!-- Debug Info (remove in production) -->
+        {% if request.user.is_superuser %}
+            <div style="margin-top: 30px; padding: 15px; background-color: #1a1a1a; border-radius: 6px; font-size: 12px; color: #666;">
+                <strong>Debug Info:</strong><br>
+                Confidence: {{ nlp_result.confidence }}<br>
+                Exercises Found: {{ exercises|length }}<br>
+                Matched: {{ exercises|length|add:missing_exercises|length|floatformat:0 }}<br>
+                Missing: {{ missing_exercises|length }}
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

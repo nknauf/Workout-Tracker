@@ -58,6 +58,36 @@
             z-index: 1;
             color: white;
         }
+        .nlp-highlight {
+            background: linear-gradient(135deg, #007acc, #005a9e);
+            color: white;
+            border: 2px solid #007acc;
+            font-weight: 600;
+        }
+        .nlp-highlight:hover {
+            background: linear-gradient(135deg, #005a9e, #004080);
+            transform: translateY(-2px);
+        }
+        .workout-list {
+            text-align: left;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        .workout-item {
+            background-color: #1e1e1e;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007acc;
+        }
+        .workout-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .workout-meta {
+            color: #aaa;
+            font-size: 0.9em;
+        }
     </style>
 </head>
 <body>
@@ -75,7 +105,28 @@
         <p><strong>Total Carbs:</strong> {{ total_carbs }} g carbs</p>
         <p><strong>Total Fats:</strong> {{ total_fats }} g fats</p>
 
+        {% if todays_workouts %}
+            <h2>Today's Workouts ({{ workout_count }})</h2>
+            <div class="workout-list">
+                {% for workout in todays_workouts %}
+                    <div class="workout-item">
+                        <div class="workout-name">{{ workout.name }}</div>
+                        <div class="workout-meta">
+                            Created: {{ workout.created_at|time:"g:i A" }} | 
+                            Exercises: {{ workout.items.count }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <h2>What are we doing today?</h2>
+        
+        <!-- Highlight the NLP feature -->
+        <a href="{% url 'conversational_input' %}" class="nlp-highlight">💬 Conversational Input (NEW!)</a>
+        
+        <br>
+        
         <a href="{% url 'create_workout' %}">Log Workout</a>
         <a href="{% url 'log_meal_entry' %}">Log Meal</a>
         <a href="{% url 'calendar' %}">View Calendar</a>
