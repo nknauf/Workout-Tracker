@@ -1,81 +1,249 @@
 from django import forms
-from .models import Exercise, Workout, MealEntry, Equipment, Muscle, BaseExercise
+from .models import Exercise, Workout, MealEntry, Equipment, MuscleGroup, SavedWorkout
 
-class BaseExerciseForm(forms.ModelForm):
-    class Meta:
-        model = BaseExercise
-        fields = [
-            'name', 'muscle_group',
-        ]
-        widgets = {
-            'muscle_group': forms.CheckboxSelectMultiple(),
-        }
 
 class ExerciseForm(forms.ModelForm):
+    """Form for creating/editing exercises"""
     class Meta:
         model = Exercise
-        fields = [
-            'base_exercise', 'name', 'muscle_group', 'equipment', 'notes'
-        ]
+        fields = ['name', 'primary_muscle_group', 'secondary_muscle_groups', 'equipment', 'notes']
         widgets = {
-            'muscle_group': forms.CheckboxSelectMultiple(),
-            'equipment': forms.CheckboxSelectMultiple(),
-            'notes': forms.Textarea(attrs={'rows': 3}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter exercise name (e.g., Bench Press)'
+            }),
+            'primary_muscle_group': forms.Select(attrs={'class': 'form-select'}),
+            'secondary_muscle_groups': forms.CheckboxSelectMultiple(attrs={
+                'class': 'form-check-input'
+            }),
+            'equipment': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Optional notes about this exercise...'
+            }),
+        }
+        labels = {
+            'primary_muscle_group': 'Primary Muscle Group',
+            'secondary_muscle_groups': 'Secondary Muscle Groups (optional)',
+            'equipment': 'Equipment Required',
         }
 
 
 class WorkoutForm(forms.ModelForm):
+    """Simple form for workout name"""
     class Meta:
         model = Workout
         fields = ['name']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter workout name (e.g., Upper Body Push)'
+            }),
         }
+
 
 class MealEntryForm(forms.ModelForm):
+    """Form for logging meal entries"""
     class Meta:
         model = MealEntry
-        fields = ['name', 'calories', 'protein', 'carbs', 'fats', 'is_template']
+        fields = ['name', 'calories', 'protein', 'carbs', 'fats']
         widgets = {
-            'is_template': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter meal name (e.g., Chicken & Rice)'
+            }),
+            'calories': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'placeholder': 'Calories'
+            }),
+            'protein': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'placeholder': 'Protein (g)'
+            }),
+            'carbs': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'placeholder': 'Carbs (g)'
+            }),
+            'fats': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 0,
+                'placeholder': 'Fats (g)'
+            })
         }
 
-class ConversationalInputForm(forms.Form):
-    """Form for conversational input of workouts and meals"""
-    input_text = forms.CharField(
-        widget=forms.Textarea(attrs={
-            'placeholder': 'Describe your workout or meal in natural language...\n\nExamples:\n• "I did 3 sets of 10 reps bench press and 5 sets of 5 deadlifts at 225 lbs"\n• "I ate chicken breast with 250 calories and 35g protein, plus a protein shake"\n• "30 minutes of running followed by 20 pushups"',
-            'rows': 6,
-            'class': 'conversational-input',
-            'style': 'width: 100%; padding: 15px; border-radius: 8px; border: 2px solid #444; background-color: #222; color: #f0f0f0; font-size: 16px; resize: vertical;'
+
+
+class SavedWorkoutForm(forms.ModelForm):
+    """Form for creating/editing saved workout templates"""
+    class Meta:
+        model = SavedWorkout
+        fields = ['name', 'description', 'is_favorite']
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter template name (e.g., Push Day A)'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Optional description of this workout template...'
+            }),
+            'is_favorite': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+        }
+        labels = {
+            'is_favorite': 'Mark as favorite template',
+        }
+
+
+class ExerciseFilterForm(forms.Form):
+    """Form for filtering exercises in workout creation"""
+    muscle_group = forms.ModelMultipleChoiceField(
+        queryset=MuscleGroup.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={
+            'class': 'form-check-input'
         }),
-        label='',
-        max_length=1000
+        label='Filter by Muscle Group'
     )
     
-    input_type = forms.ChoiceField(
-        choices=[
-            ('auto', 'Auto-detect'),
-            ('workout', 'Workout'),
-            ('meal', 'Meal')
-        ],
-        initial='auto',
-        widget=forms.Select(attrs={
-            'class': 'input-type-select',
-            'style': 'padding: 8px; border-radius: 4px; background-color: #333; color: #f0f0f0; border: 1px solid #555;'
+    equipment = forms.ModelMultipleChoiceField(
+        queryset=Equipment.objects.all(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={
+            'class': 'form-check-input'
+        }),
+        label='Filter by Equipment'
+    )
+
+
+class WorkoutExerciseForm(forms.Form):
+    """Form for adding exercise details to workout"""
+    sets = forms.IntegerField(
+        initial=3,
+        min_value=1,
+        max_value=20,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control form-control-sm',
+            'style': 'width: 80px;'
+        })
+    )
+    
+    reps = forms.IntegerField(
+        initial=10,
+        min_value=1,
+        max_value=100,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control form-control-sm',
+            'style': 'width: 80px;'
+        })
+    )
+    
+    weight = forms.DecimalField(
+        required=False,
+        min_value=0,
+        max_digits=6,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control form-control-sm',
+            'style': 'width: 100px;',
+            'placeholder': 'Weight',
+            'step': '0.5'
+        })
+    )
+    
+    rest_seconds = forms.IntegerField(
+        required=False,
+        min_value=0,
+        max_value=3600,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control form-control-sm',
+            'style': 'width: 100px;',
+            'placeholder': 'Rest (sec)'
         })
     )
 
-class ConfirmationForm(forms.Form):
-    """Form for confirming parsed data before saving"""
-    confirm = forms.BooleanField(
-        required=True,
-        widget=forms.CheckboxInput(attrs={
-            'class': 'confirmation-checkbox',
-            'style': 'transform: scale(1.5); margin-right: 10px;'
+
+class DateFilterForm(forms.Form):
+    """Form for filtering by date range"""
+    start_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        }),
+        label='From Date'
+    )
+    
+    end_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        }),
+        label='To Date'
+    )
+
+
+class QuickMealForm(forms.Form):
+    """Quick form for common meal logging"""
+    MEAL_CHOICES = [
+        ('protein_shake', 'Protein Shake (300 cal, 30g protein)'),
+        ('chicken_rice', 'Chicken & Rice (550 cal, 45g protein, 60g carbs)'),
+        ('oatmeal', 'Oatmeal with Banana (400 cal, 12g protein, 65g carbs)'),
+        ('greek_yogurt', 'Greek Yogurt (200 cal, 15g protein, 25g carbs)'),
+        ('custom', 'Custom meal (fill details below)'),
+    ]
+    
+    meal_type = forms.ChoiceField(
+        choices=MEAL_CHOICES,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'onchange': 'updateMealFields(this.value)'
+        }),
+        label='Quick Meal Selection'
+    )
+    
+    # These fields will be auto-filled based on selection
+    name = forms.CharField(
+        max_length=200,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Meal name'
         })
     )
     
-    # Hidden fields to store the parsed data
-    parsed_data = forms.CharField(widget=forms.HiddenInput())
-    input_type = forms.CharField(widget=forms.HiddenInput())
+    calories = forms.IntegerField(
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control'
+        })
+    )
+    
+    protein = forms.IntegerField(
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control'
+        })
+    )
+    
+    carbs = forms.IntegerField(
+        initial=0,
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control'
+        })
+    )
+    
+    fats = forms.IntegerField(
+        initial=0,
+        min_value=0,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control'
+        })
+    )

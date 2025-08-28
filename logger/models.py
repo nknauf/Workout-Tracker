@@ -1,204 +1,174 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
-from django.contrib.contenttypes.models import ContentType
 
 # --- Core Entities ---
 
-class BaseMuscle(models.Model):
+class MuscleGroup(models.Model):
+    """Generic muscle groups'"""
     name = models.CharField(max_length=100, unique=True)
-
+    
     def __str__(self):
         return self.name
-
-class Muscle(models.Model):
-    name = models.CharField(max_length=100)
-    base_muscle = models.ForeignKey(BaseMuscle, on_delete=models.CASCADE, related_name='muscles')
-
-    def __str__(self):
-        return f"{self.base_muscle.name} - {self.name}"
 
 class Equipment(models.Model):
-    name = models.CharField(max_length=100)
-
+    """Equipment types, exluding speific machines and attachments"""
+    name = models.CharField(max_length=100, unique=True)
+    
     def __str__(self):
         return self.name
 
-# --- Exercise Models ---
-
-class BaseExercise(models.Model):
+class Exercise(models.Model):
+    """Single exercise model - no complexity"""
     name = models.CharField(max_length=200, unique=True)
-    muscle_group = models.ManyToManyField(Muscle)
+    primary_muscle_group = models.ForeignKey(MuscleGroup, on_delete=models.CASCADE, related_name='primary_exercises')
+    secondary_muscle_groups = models.ManyToManyField(MuscleGroup, blank=True, related_name='secondary_exercises')
+    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE)
+    notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
+    
     def __str__(self):
         return self.name
-
+    
     class Meta:
         ordering = ['name']
 
-class Exercise(models.Model):
-    base_exercise = models.ForeignKey(BaseExercise, on_delete=models.CASCADE, related_name='exercises', null=True, blank=True)
+
+class Workout(models.Model):
+    """Simple workout - no templates"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
-    muscle_group = models.ManyToManyField(Muscle)
-    equipment = models.ManyToManyField(Equipment)
+    date = models.DateField()
+    exercises = models.ManyToManyField(Exercise, through='WorkoutExercise')
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
+    
     def __str__(self):
-        return self.name
-        
+        return f"{self.name} - {self.date}"
+    
+    class Meta:
+        ordering = ['-date', '-created_at']
 
-    def save(self, *args, **kwargs):
-        if not self.name and self.base_exercise:
-            self.name = self.base_exercise.name
-        super().save(*args, **kwargs)
-
-# --- Drop Set Models ---
-
-# --- Meal Entry ---
+class WorkoutExercise(models.Model):
+    """Junction table for workout-exercise relationship with exercise-specific data"""
+    workout = models.ForeignKey(Workout, on_delete=models.CASCADE)
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE)
+    sets = models.PositiveIntegerField(default=3)
+    reps = models.PositiveIntegerField(default=10)
+    weight = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    rest_seconds = models.PositiveIntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)  # Order within the workout
+    
+    class Meta:
+        ordering = ['order']
+        unique_together = ['workout', 'exercise']
 
 class MealEntry(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, blank=True, null=True)
+    """Simple meal entry"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
     calories = models.PositiveIntegerField()
     protein = models.PositiveIntegerField()
     carbs = models.PositiveIntegerField(default=0)
     fats = models.PositiveIntegerField(default=0)
-    is_template = models.BooleanField(default=False)
+    date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.name} - {self.calories} cal"
-
-# --- Workout (Polymorphic) ---
-
-class WorkoutExerciseItem(models.Model):
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    content_object = GenericForeignKey('content_type', 'object_id')
-    workout = models.ForeignKey('Workout', on_delete=models.CASCADE, null=True, related_name='exercise_items')
-    template = models.ForeignKey('WorkoutTemplate', on_delete=models.CASCADE, null=True, related_name='exercise_items')
-    order = models.PositiveIntegerField(default=0)
-    working_sets = models.PositiveIntegerField(default=0)
-    max_weight = models.DecimalField(max_digits=6, decimal_places=2, default=0)
-    max_weight_reps = models.PositiveIntegerField(default=0)
-    notes = models.TextField(blank=True)
-
-    class Meta:
-        ordering = ['order']
-        unique_together = ['workout', 'order']
-
-
-class Workout(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=200)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-created_at']
-
-    def get_exercises(self):
-        """Get all exercises in this workout in order"""
-        return [item.content_object for item in self.exercise_items.all()]
     
-    def add_exercise(self, exercise):
-        """Add an exercise to the workout"""
-        next_order = self.exercise_items.count()
-        WorkoutExerciseItem.objects.create(
-            workout=self,
-            content_type=ContentType.objects.get_for_model(exercise),
-            object_id=exercise.id,
-            order=next_order
-        )
-    
-    def remove_exercise(self, exercise):
-        """Remove an exercise from the workout"""
-        exercise_type = ContentType.objects.get_for_model(exercise)
-        item = self.exercise_items.filter(
-            content_type=exercise_type,
-            object_id=exercise.id
-        ).first()
-        if item:
-            item.delete()
-            self.reorder_items()
-
-    def reorder_items(self):
-        """Reorder all items to ensure sequential order"""
-        items = self.exercise_items.all()
-        for index, item in enumerate(items):
-            item.order = index
-            item.save()
-
     def __str__(self):
-        return self.name
-
-# --- Daily Log ---
+        return f"{self.name} - {self.calories} cal ({self.date})"
+    
+    class Meta:
+        ordering = ['-date', '-created_at']
 
 class DailyLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     date = models.DateField()
     workouts = models.ManyToManyField(Workout, blank=True, related_name='daily_logs')
-    workout_templates = models.ManyToManyField('WorkoutTemplate', blank=True, related_name='daily_logs')
     meals = models.ManyToManyField(MealEntry, blank=True, related_name='daily_logs')
+    total_calories = models.PositiveIntegerField(default=0)
+    total_protein = models.PositiveIntegerField(default=0)
+    total_carbs = models.PositiveIntegerField(default=0)
+    total_fats = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ['user', 'date']
 
     def __str__(self):
         return f"{self.user.username} - {self.date}"
 
-# --- Templates ---
-
-class WorkoutTemplate(models.Model):
+class SavedWorkout(models.Model):
+    """Saved workout templates that users can reuse"""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200)  # "Push Day A", "Leg Day", "Quick Arms"
+    description = models.TextField(blank=True)  # Optional notes about the workout
+    exercises = models.ManyToManyField(Exercise, through='SavedWorkoutExercise')
+    is_favorite = models.BooleanField(default=False)  # Pin favorites to top
+    times_used = models.PositiveIntegerField(default=0)  # Track popularity
     created_at = models.DateTimeField(auto_now_add=True)
-
+    last_used = models.DateTimeField(null=True, blank=True)
+    
     class Meta:
-        ordering = ['-created_at']
-
-    def get_exercises(self):
-        """Get all exercises in this workout in order"""
-        return [item.content_object for item in self.exercise_items.all()]
+        ordering = ['-is_favorite', '-last_used', '-times_used', 'name']
     
-    def add_exercise(self, exercise):
-        """Add an exercise to the workout"""
-        next_order = self.exercise_items.count()
-        WorkoutExerciseItem.objects.create(
-            workout=self,
-            content_type=ContentType.objects.get_for_model(exercise),
-            object_id=exercise.id,
-            order=next_order
+    def __str__(self):
+        return f"{self.name} ({self.user.username})"
+    
+    def create_workout_from_template(self, date=None, name_override=None):
+        """Create a new Workout based on this saved workout"""
+        from datetime import date as dt_date
+        
+        # Create the new workout
+        workout = Workout.objects.create(
+            user=self.user,
+            name=name_override or f"{self.name} - {date or dt_date.today()}",
+            date=date or dt_date.today(),
+            notes=f"Created from saved workout: {self.name}"
         )
+        
+        # Copy all exercises with their default values
+        for saved_exercise in self.saved_exercises.all():
+            WorkoutExercise.objects.create(
+                workout=workout,
+                exercise=saved_exercise.exercise,
+                sets=saved_exercise.default_sets,
+                reps=saved_exercise.default_reps,
+                weight=saved_exercise.default_weight,
+                rest_seconds=saved_exercise.default_rest_seconds,
+                notes=saved_exercise.notes,
+                order=saved_exercise.order
+            )
+        
+        # Update usage stats
+        self.times_used += 1
+        self.last_used = workout.created_at
+        self.save()
+        
+        return workout
+
+class SavedWorkoutExercise(models.Model):
+    """Junction table for SavedWorkout-Exercise with default values"""
+    saved_workout = models.ForeignKey(SavedWorkout, on_delete=models.CASCADE, related_name='saved_exercises')
+    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE)
+    default_sets = models.PositiveIntegerField(default=3)
+    default_reps = models.PositiveIntegerField(default=10)
+    default_weight = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    default_rest_seconds = models.PositiveIntegerField(null=True, blank=True)
+    notes = models.TextField(blank=True)  # Exercise-specific notes for this template
+    order = models.PositiveIntegerField(default=0)
     
-    def remove_exercise(self, exercise):
-        """Remove an exercise from the workout"""
-        exercise_type = ContentType.objects.get_for_model(exercise)
-        item = self.exercise_items.filter(
-            content_type=exercise_type,
-            object_id=exercise.id
-        ).first()
-        if item:
-            item.delete()
-            self.reorder_items()
-
-    def reorder_items(self):
-        """Reorder all items to ensure sequential order"""
-        items = self.exercise_items.all()
-        for index, item in enumerate(items):
-            item.order = index
-            item.save()
-
+    class Meta:
+        ordering = ['order']
+        unique_together = ['saved_workout', 'exercise']
+    
     def __str__(self):
-        return self.name
+        return f"{self.saved_workout.name} - {self.exercise.name}"
 
-class MealTemplate(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=200)
-    calories = models.PositiveIntegerField()
-    protein = models.PositiveIntegerField()
-    carbs = models.PositiveIntegerField(default=0)
-    fats = models.PositiveIntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.name
+# Implement in future for more complex saved workout management
+# class SavedWorkoutManager(models.Manager):
+#     def popular_for_user(self, user, limit=5):
+#         """Get most popular saved workouts for a user"""
+#         return self.filter(user=user).order_by('-times_used')[:limit]
+    
+#     def recent_for_user(self, user, limit=5):
+#         """Get recently used saved workouts for a user"""
+#         return self.filter(user=user, last_used__isnull=False).order_by('-last_used')[:limit]

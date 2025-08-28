@@ -1,144 +1,138 @@
 from django.contrib import admin
-from django.contrib.contenttypes.admin import GenericTabularInline
 from .models import (
-    Equipment, Exercise, Workout, MealEntry, DailyLog, WorkoutTemplate, 
-    MealTemplate, BaseMuscle, Muscle, BaseExercise, WorkoutExerciseItem
+    MuscleGroup, Equipment, Exercise, Workout, WorkoutExercise, 
+    MealEntry, DailyLog, SavedWorkout, SavedWorkoutExercise
 )
 
 
-class MuscleInline(admin.TabularInline):
-    model = Muscle
-    extra = 1
-
-
-@admin.register(BaseMuscle)
-class BaseMuscleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'get_muscle_count']
+@admin.register(MuscleGroup)
+class MuscleGroupAdmin(admin.ModelAdmin):
+    list_display = ['name', 'get_primary_exercise_count', 'get_secondary_exercise_count']
     search_fields = ['name']
-    inlines = [MuscleInline]
+    ordering = ['name']
     
-    def get_muscle_count(self, obj):
-        return obj.muscles.count()
-    get_muscle_count.short_description = 'Specific Muscles'
-
-
-@admin.register(Muscle)
-class MuscleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'base_muscle']
-    list_filter = ['base_muscle']
-    search_fields = ['name', 'base_muscle__name']
-    ordering = ['base_muscle__name', 'name']
+    def get_primary_exercise_count(self, obj):
+        return obj.primary_exercises.count()
+    get_primary_exercise_count.short_description = 'Primary Exercises'
+    
+    def get_secondary_exercise_count(self, obj):
+        return obj.secondary_exercises.count()
+    get_secondary_exercise_count.short_description = 'Secondary Exercises'
 
 
 @admin.register(Equipment)
 class EquipmentAdmin(admin.ModelAdmin):
-    list_display = ['name']
+    list_display = ['name', 'get_exercise_count']
     search_fields = ['name']
     ordering = ['name']
-
-
-class ExerciseInline(admin.TabularInline):
-    model = Exercise
-    extra = 1
-    fields = ['name', 'notes']
-    show_change_link = True
-
-
-@admin.register(BaseExercise)
-class BaseExerciseAdmin(admin.ModelAdmin):
-    list_display = ['name', 'get_muscle_groups', 'get_exercise_count', 'created_at']
-    list_filter = ['muscle_group', 'created_at']
-    filter_horizontal = ['muscle_group']
-    search_fields = ['name']
-    readonly_fields = ['created_at', 'updated_at']
-    inlines = [ExerciseInline]
-    date_hierarchy = 'created_at'
-
-    def get_muscle_groups(self, obj):
-        return ", ".join([mg.name for mg in obj.muscle_group.all()[:3]])
-    get_muscle_groups.short_description = 'Primary Muscles'
     
     def get_exercise_count(self, obj):
-        return obj.exercises.count()
-    get_exercise_count.short_description = 'Variations'
+        return obj.exercise_set.count()
+    get_exercise_count.short_description = 'Exercises Using This'
 
 
 @admin.register(Exercise)
 class ExerciseAdmin(admin.ModelAdmin):
-    list_display = ['name', 'base_exercise', 'get_muscle_groups', 'get_equipment', 'created_at']
-    list_filter = ['base_exercise', 'muscle_group', 'equipment', 'created_at']
-    filter_horizontal = ['muscle_group', 'equipment']
-    search_fields = ['name', 'base_exercise__name', 'notes']
+    list_display = ['name', 'primary_muscle_group', 'equipment', 'get_secondary_muscles', 'created_at']
+    list_filter = ['primary_muscle_group', 'equipment', 'secondary_muscle_groups', 'created_at']
+    filter_horizontal = ['secondary_muscle_groups']
+    search_fields = ['name', 'notes', 'primary_muscle_group__name']
     readonly_fields = ['created_at']
     date_hierarchy = 'created_at'
     ordering = ['name']
 
-    def get_muscle_groups(self, obj):
-        muscles = obj.muscle_group.all()[:3]
-        result = ", ".join([mg.name for mg in muscles])
-        if obj.muscle_group.count() > 3:
-            result += f" (+{obj.muscle_group.count() - 3} more)"
-        return result
-    get_muscle_groups.short_description = 'Muscles'
+    def get_secondary_muscles(self, obj):
+        secondary = obj.secondary_muscle_groups.all()[:3]
+        result = ", ".join([mg.name for mg in secondary])
+        if obj.secondary_muscle_groups.count() > 3:
+            result += f" (+{obj.secondary_muscle_groups.count() - 3} more)"
+        return result or "None"
+    get_secondary_muscles.short_description = 'Secondary Muscles'
 
-    def get_equipment(self, obj):
-        equipment = obj.equipment.all()[:3]
-        result = ", ".join([eq.name for eq in equipment])
-        if obj.equipment.count() > 3:
-            result += f" (+{obj.equipment.count() - 3} more)"
-        return result
-    get_equipment.short_description = 'Equipment'
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'primary_muscle_group', 'equipment')
+        }),
+        ('Secondary Muscles', {
+            'fields': ('secondary_muscle_groups',)
+        }),
+        ('Additional Info', {
+            'fields': ('notes', 'created_at'),
+            'classes': ('collapse',)
+        })
+    )
 
 
-class WorkoutExerciseItemInline(admin.TabularInline):
-    model = WorkoutExerciseItem
+class WorkoutExerciseInline(admin.TabularInline):
+    model = WorkoutExercise
     extra = 1
-    fields = ['content_type', 'object_id', 'order', 'working_sets', 'max_weight', 'max_weight_reps', 'notes']
+    fields = ['exercise', 'sets', 'reps', 'weight', 'rest_seconds', 'order', 'notes']
     ordering = ['order']
 
 
 @admin.register(Workout)
 class WorkoutAdmin(admin.ModelAdmin):
-    list_display = ['name', 'user', 'get_exercise_count', 'created_at']
-    list_filter = ['created_at', 'user']
-    search_fields = ['name', 'user__username', 'user__first_name', 'user__last_name']
+    list_display = ['name', 'user', 'date', 'get_exercise_count', 'created_at']
+    list_filter = ['date', 'user', 'created_at']
+    search_fields = ['name', 'user__username', 'user__first_name', 'user__last_name', 'notes']
     readonly_fields = ['created_at']
-    date_hierarchy = 'created_at'
-    inlines = [WorkoutExerciseItemInline]
+    date_hierarchy = 'date'
+    inlines = [WorkoutExerciseInline]
+    ordering = ['-date', '-created_at']
     
     def get_exercise_count(self, obj):
-        return obj.exercise_items.count()
+        return obj.workoutexercise_set.count()
     get_exercise_count.short_description = 'Exercises'
 
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('user', 'name', 'date')
+        }),
+        ('Additional Info', {
+            'fields': ('notes', 'created_at'),
+            'classes': ('collapse',)
+        })
+    )
 
-@admin.register(WorkoutExerciseItem)
-class WorkoutExerciseItemAdmin(admin.ModelAdmin):
-    list_display = ['get_parent', 'content_object', 'order', 'working_sets', 'max_weight', 'max_weight_reps']
-    list_filter = ['content_type', 'working_sets']
-    search_fields = ['workout__name', 'template__name']
-    ordering = ['workout', 'template', 'order']
-    readonly_fields = ['content_type', 'object_id', 'content_object']
+
+@admin.register(WorkoutExercise)
+class WorkoutExerciseAdmin(admin.ModelAdmin):
+    list_display = ['workout', 'exercise', 'sets', 'reps', 'weight', 'order']
+    list_filter = ['workout__date', 'exercise__primary_muscle_group', 'sets', 'workout__user']
+    search_fields = ['workout__name', 'exercise__name', 'notes']
+    ordering = ['workout__date', 'workout', 'order']
+    readonly_fields = ['get_primary_muscle']
     
-    def get_parent(self, obj):
-        if obj.workout:
-            return f"Workout: {obj.workout.name}"
-        elif obj.template:
-            return f"Template: {obj.template.name}"
-        return "No Parent"
-    get_parent.short_description = 'Parent'
+    def get_primary_muscle(self, obj):
+        return obj.exercise.primary_muscle_group.name
+    get_primary_muscle.short_description = 'Primary Muscle'
+
+    fieldsets = (
+        ('Workout Details', {
+            'fields': ('workout', 'exercise', 'order')
+        }),
+        ('Exercise Parameters', {
+            'fields': ('sets', 'reps', 'weight', 'rest_seconds')
+        }),
+        ('Additional Info', {
+            'fields': ('notes', 'get_primary_muscle'),
+            'classes': ('collapse',)
+        })
+    )
 
 
 @admin.register(MealEntry)
 class MealEntryAdmin(admin.ModelAdmin):
-    list_display = ['name', 'user', 'calories', 'protein', 'carbs', 'fats', 'is_template', 'created_at']
-    list_filter = ['is_template', 'created_at', 'user']
+    list_display = ['name', 'user', 'date', 'calories', 'protein', 'carbs', 'fats']
+    list_filter = ['date', 'user', 'created_at']
     search_fields = ['name', 'user__username', 'user__first_name', 'user__last_name']
     readonly_fields = ['created_at']
-    date_hierarchy = 'created_at'
+    date_hierarchy = 'date'
+    ordering = ['-date', 'name']
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('user', 'name', 'is_template')
+            'fields': ('user', 'name', 'date')
         }),
         ('Nutritional Information', {
             'fields': ('calories', 'protein', 'carbs', 'fats')
@@ -152,77 +146,109 @@ class MealEntryAdmin(admin.ModelAdmin):
 
 @admin.register(DailyLog)
 class DailyLogAdmin(admin.ModelAdmin):
-    list_display = ['user', 'date', 'get_meals_count', 'get_workouts_count', 'get_workout_templates_count']
+    list_display = ['user', 'date', 'get_workout_count', 'get_meal_count', 'total_calories', 'total_protein']
     list_filter = ['date', 'user']
     search_fields = ['user__username', 'user__first_name', 'user__last_name']
-    filter_horizontal = ['meals', 'workouts', 'workout_templates']
+    filter_horizontal = ['workouts', 'meals']
     date_hierarchy = 'date'
     ordering = ['-date']
 
-    def get_meals_count(self, obj):
-        return obj.meals.count()
-    get_meals_count.short_description = 'Meals'
-
-    def get_workouts_count(self, obj):
+    def get_workout_count(self, obj):
         return obj.workouts.count()
-    get_workouts_count.short_description = 'Workouts'
-    
-    def get_workout_templates_count(self, obj):
-        return obj.workout_templates.count()
-    get_workout_templates_count.short_description = 'Templates'
+    get_workout_count.short_description = 'Workouts'
+
+    def get_meal_count(self, obj):
+        return obj.meals.count()
+    get_meal_count.short_description = 'Meals'
 
     fieldsets = (
         ('Basic Information', {
             'fields': ('user', 'date')
         }),
-        ('Workouts', {
-            'fields': ('workouts', 'workout_templates')
+        ('Daily Activities', {
+            'fields': ('workouts', 'meals')
         }),
-        ('Meals', {
-            'fields': ('meals',)
+        ('Nutritional Totals', {
+            'fields': ('total_calories', 'total_protein', 'total_carbs', 'total_fats'),
+            'description': 'These totals should match the sum of all meals for this date.'
         })
     )
 
 
-class WorkoutTemplateExerciseItemInline(admin.TabularInline):
-    model = WorkoutExerciseItem
-    fk_name = 'template'
+class SavedWorkoutExerciseInline(admin.TabularInline):
+    model = SavedWorkoutExercise
     extra = 1
-    fields = ['content_type', 'object_id', 'order', 'working_sets', 'max_weight', 'max_weight_reps', 'notes']
+    fields = ['exercise', 'default_sets', 'default_reps', 'default_weight', 'default_rest_seconds', 'order', 'notes']
     ordering = ['order']
 
 
-@admin.register(WorkoutTemplate)
-class WorkoutTemplateAdmin(admin.ModelAdmin):
-    list_display = ['name', 'user', 'get_exercise_count', 'created_at']
-    list_filter = ['created_at', 'user']
-    search_fields = ['name', 'user__username', 'user__first_name', 'user__last_name']
-    readonly_fields = ['created_at']
+@admin.register(SavedWorkout)
+class SavedWorkoutAdmin(admin.ModelAdmin):
+    list_display = ['name', 'user', 'is_favorite', 'times_used', 'last_used', 'get_exercise_count', 'created_at']
+    list_filter = ['is_favorite', 'user', 'created_at', 'last_used']
+    search_fields = ['name', 'description', 'user__username', 'user__first_name', 'user__last_name']
+    readonly_fields = ['times_used', 'last_used', 'created_at']
     date_hierarchy = 'created_at'
-    inlines = [WorkoutTemplateExerciseItemInline]
+    inlines = [SavedWorkoutExerciseInline]
+    ordering = ['-is_favorite', '-last_used', '-times_used', 'name']
     
     def get_exercise_count(self, obj):
-        return obj.exercise_items.count()
+        return obj.saved_exercises.count()
     get_exercise_count.short_description = 'Exercises'
 
-
-@admin.register(MealTemplate)
-class MealTemplateAdmin(admin.ModelAdmin):
-    list_display = ['name', 'user', 'calories', 'protein', 'carbs', 'fats', 'created_at']
-    list_filter = ['created_at', 'user']
-    search_fields = ['name', 'user__username', 'user__first_name', 'user__last_name']
-    readonly_fields = ['created_at']
-    date_hierarchy = 'created_at'
-    
     fieldsets = (
         ('Basic Information', {
-            'fields': ('user', 'name')
+            'fields': ('user', 'name', 'description', 'is_favorite')
         }),
-        ('Nutritional Information', {
-            'fields': ('calories', 'protein', 'carbs', 'fats')
+        ('Usage Statistics', {
+            'fields': ('times_used', 'last_used', 'created_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+    actions = ['mark_as_favorite', 'mark_as_not_favorite', 'reset_usage_stats']
+
+    def mark_as_favorite(self, request, queryset):
+        updated = queryset.update(is_favorite=True)
+        self.message_user(request, f'{updated} saved workout(s) marked as favorite.')
+    mark_as_favorite.short_description = "Mark selected workouts as favorite"
+
+    def mark_as_not_favorite(self, request, queryset):
+        updated = queryset.update(is_favorite=False)
+        self.message_user(request, f'{updated} saved workout(s) unmarked as favorite.')
+    mark_as_not_favorite.short_description = "Unmark selected workouts as favorite"
+
+    def reset_usage_stats(self, request, queryset):
+        updated = queryset.update(times_used=0, last_used=None)
+        self.message_user(request, f'Usage statistics reset for {updated} saved workout(s).')
+    reset_usage_stats.short_description = "Reset usage statistics"
+
+
+@admin.register(SavedWorkoutExercise)
+class SavedWorkoutExerciseAdmin(admin.ModelAdmin):
+    list_display = ['saved_workout', 'exercise', 'default_sets', 'default_reps', 'default_weight', 'order']
+    list_filter = ['saved_workout__user', 'exercise__primary_muscle_group', 'default_sets']
+    search_fields = ['saved_workout__name', 'exercise__name', 'notes']
+    ordering = ['saved_workout__name', 'order']
+    readonly_fields = ['get_primary_muscle', 'get_equipment']
+    
+    def get_primary_muscle(self, obj):
+        return obj.exercise.primary_muscle_group.name
+    get_primary_muscle.short_description = 'Primary Muscle'
+    
+    def get_equipment(self, obj):
+        return obj.exercise.equipment.name
+    get_equipment.short_description = 'Equipment'
+
+    fieldsets = (
+        ('Template Details', {
+            'fields': ('saved_workout', 'exercise', 'order')
         }),
-        ('Metadata', {
-            'fields': ('created_at',),
+        ('Default Parameters', {
+            'fields': ('default_sets', 'default_reps', 'default_weight', 'default_rest_seconds')
+        }),
+        ('Exercise Info', {
+            'fields': ('get_primary_muscle', 'get_equipment', 'notes'),
             'classes': ('collapse',)
         })
     )

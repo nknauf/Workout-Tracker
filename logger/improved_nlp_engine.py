@@ -1,6 +1,6 @@
 import re
 import json
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Optional, Tuple
 from datetime import date
 from django.db import transaction
 from .models import (
@@ -8,612 +8,639 @@ from .models import (
     WorkoutExerciseItem, BaseExercise
 )
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.auth.models import User
 import logging
 
 logger = logging.getLogger(__name__)
 
-class ImprovedNLPEngine:
+class MultiTurnNLPEngine:
     """
-    Improved NLP Engine with better pattern matching and accuracy
+    Multi-turn conversational NLP engine for workout creation
     """
     
     def __init__(self):
-        # Enhanced workout patterns with better regex
-        self.workout_patterns = {
-            # "3 sets of 10 reps bench press" or "3x10 bench press"
-            'sets_reps_exercise': r'(\d+)\s*(?:sets?\s+of\s+|x|X)\s*(\d+)\s*(?:reps?\s+)?(.+?)(?=\s+and\s+|\s*,|$)',
-            
-            # "bench press 3x10" or "bench press 3 sets of 10"
-            'exercise_sets_reps': r'([a-zA-Z\s]+?)\s+(\d+)\s*(?:x|X|sets?\s+of)\s*(\d+)',
-            
-            # "10 reps bench press" or "10 bench press"
-            'reps_exercise': r'(\d+)\s*(?:reps?\s+)?([a-zA-Z\s]+?)(?=\s+and\s+|\s*,|$)',
-            
-            # "bench press at 135 lbs" or "135 lb bench press"
-            'exercise_weight': r'([a-zA-Z\s]+?)\s+(?:at\s+)?(\d+)\s*(?:lbs?|kg|pounds?)',
-            'weight_exercise': r'(\d+)\s*(?:lbs?|kg|pounds?)\s+([a-zA-Z\s]+)',
-            
-            # "30 minutes running" or "30 min cardio"
-            'duration_exercise': r'(\d+)\s*(?:minutes?|mins?|hours?|hrs?)\s+(?:of\s+)?([a-zA-Z\s]+)',
-            
-            # Simple mentions: "did bench press", "completed squats"
-            'simple_mentions': r'(?:did|completed|performed|finished)\s+([a-zA-Z\s]+?)(?=\s+and\s+|\s*,|$)',
-            
-            # List format: "bench press, squats, deadlifts"
-            'exercise_list': r'\b([a-zA-Z\s]{3,}?)(?:,|\s+and\s+|$)',
+        # Conversation states
+        self.STATES = {
+            'INITIAL': 'initial',
+            'WORKOUT_TYPE': 'workout_type',
+            'COLLECTING_EXERCISES': 'collecting_exercises',
+            'CONFIRM_WORKOUT': 'confirm_workout',
+            'COMPLETED': 'completed'
         }
         
-        # Enhanced exercise name mappings
-        self.exercise_mappings = {
-            # Common abbreviations
-            'bench': 'bench press',
-            'bp': 'bench press',
-            'squats': 'squat',
-            'deadlifts': 'deadlift',
-            'dl': 'deadlift',
-            'pullups': 'pullup',
-            'pull ups': 'pullup',
-            'pull-ups': 'pullup',
-            'pushups': 'pushup',
-            'push ups': 'pushup',
-            'push-ups': 'pushup',
-            'curls': 'bicep curl',
-            'bicep curls': 'bicep curl',
-            'ohp': 'overhead press',
-            'rows': 'barbell row',
-            'running': 'treadmill',
-            'cardio': 'treadmill',
+        # Exercise detail patterns
+        self.exercise_patterns = {
+            # Main exercise pattern: "Exercise name: details"
+            'detailed_exercise': r'^([^:]+):\s*(.+)$',
             
-            # Plural to singular
-            'presses': 'press',
-            'raises': 'raise',
-            'extensions': 'extension',
-            'flyes': 'fly',
-            'flies': 'fly',
-        }
-        
-        # Stop words to remove from exercise names
-        self.stop_words = {
-            'i', 'did', 'completed', 'performed', 'finished', 'some', 'the', 'a', 'an',
-            'with', 'and', 'or', 'at', 'for', 'sets', 'set', 'reps', 'rep', 'of',
-            'x', 'times', 'time', 'lbs', 'lb', 'kg', 'pounds', 'minutes', 'mins',
-            'hours', 'hrs', 'today', 'yesterday', 'workout', 'exercise', 'training'
-        }
-        
-        # Workout type keywords for better naming
-        self.workout_types = {
-            'chest': ['chest', 'pecs', 'bench'],
-            'back': ['back', 'lats', 'rows', 'pullup', 'pulldown'],
-            'legs': ['legs', 'quads', 'squat', 'deadlift', 'lunge'],
-            'arms': ['arms', 'bicep', 'tricep', 'curl'],
-            'shoulders': ['shoulders', 'delts', 'press', 'raise'],
-            'cardio': ['running', 'cardio', 'bike', 'treadmill', 'elliptical'],
-            'core': ['abs', 'core', 'plank', 'crunch']
-        }
-    
-    def process_workout_input(self, text: str, user) -> Dict:
-        """
-        Enhanced workout processing with better accuracy
-        """
-        logger.info(f"Processing workout input: {text}")
-        
-        # Step 1: Clean and preprocess text
-        cleaned_text = self._preprocess_text(text)
-        
-        # Step 2: Classify if this is a workout
-        is_workout = self._classify_as_workout(cleaned_text)
-        if not is_workout:
-            return {
-                'success': False,
-                'message': 'Input does not appear to be workout-related',
-                'confidence': 0.1
+            # Working sets patterns - more flexible to handle typos and variations
+            'working_sets': r'(\d+)\s*(?:working\s+)?(?:workings\s+)?sets?',
+            
+            # Max weight patterns - improved to handle different formats
+            # "3 plates max", "5 plates max"
+            'max_weight_plates': r'(\d+)\s*(?:plates?|plate)\s*(?:max|maximum)?',
+            
+            # "45 lb max", "95 lb max", "260 max"
+            'max_weight_lbs': r'(\d+)\s*(?:lb|lbs|pounds?)\s*(?:max|maximum)?',
+            
+            # Simple number max: "260 max", "75 max" (when no unit specified)
+            'max_weight_simple': r'(\d+)\s*(?:max|maximum)(?!\s*(?:reps?|rep))',
+            
+            # Max reps pattern: "4 reps max", "6 max reps"
+            'max_reps': r'(\d+)\s*(?:reps?\s*)?(?:max|maximum)(?:\s*reps?)?',
+            
+            # Exercise variations - case insensitive
+            'single_arm': r'\bsingle\s+arm\b',
+            'alternating': r'\balternating\b',
+            'seated': r'\bseated\b',
+            'standing': r'\bstanding\b',
+            'lying': r'\blying\b',
+            'incline': r'\bincline\b',
+            'decline': r'\bdecline\b',
+            
+            # Grip and bar variations
+            'flat_bar': r'\bflat\s+bar\b',
+            'ez_bar': r'\bez\s+bar\b',
+            'neutral_grip': r'\bneutral\s+grip\b',
+            'wide_grip': r'\bwide\s+grip\b',
+            'close_grip': r'\bclose\s+grip\b',
+            'overhand': r'\boverhand\b',
+            'underhand': r'\bunderhand\b',
+            
+            # Equipment specifications
+            'plate_loaded': r'\bplate\s*loaded\b',
+            'pin_loaded': r'\bpin\s*loaded\b',
+            'machine': r'\bmachine\b',
+            'cable': r'\bcable\b',
+            'dumbbell': r'\bdumbbell\b',
+            'barbell': r'\bbarbell\b',
+            
+            # Additional modifiers
+            'unilateral': r'\bunilateral\b',
+            'bilateral': r'\bbilateral\b',
+            'partial_rep': r'\bpartial\s+rep\b',
+            'pause_rep': r'\bpause\s+rep\b',
+            'tempo': r'\btempo\b',
             }
         
-        # Step 3: Enhanced exercise parsing
-        exercises = self._enhanced_parse_exercises(cleaned_text)
-        
-        # Step 4: Match exercises to database with fuzzy matching
-        matched_exercises = self._enhanced_match_exercises(exercises, user)
-        
-        # Step 5: Generate better workout name
-        workout_name = self._enhanced_generate_workout_name(cleaned_text, matched_exercises)
-        
-        # Step 6: Calculate improved confidence
-        confidence = self._enhanced_calculate_confidence(exercises, matched_exercises, cleaned_text)
-        
-        return {
-            'success': True,
-            'workout_name': workout_name,
-            'exercises': matched_exercises,
-            'confidence': confidence,
-            'raw_text': text,
-            'cleaned_text': cleaned_text,
-            'parsed_exercises': exercises
+        # Workout type keywords
+        self.workout_types = {
+            'chest': ['chest', 'pecs'],
+            'back': ['back', 'back day', 'lats', 'latissimus', 'traps'],
+            'shoulders': ['shoulders', 'shoulder', 'delts', 'delt'],
+            'front_delts': ['front delts', 'anterior deltoids', 'front delt'],
+            'side_delts': ['side delts', 'lateral deltoids', 'side delt'],
+            'rear_delts': ['rear delts', 'posterior deltoids', 'rear delt'],
+            'arms': ['arms', 'arm', 'arm day', 'arm workout'],
+            'biceps': ['biceps', 'bicep', 'bi', 'bis'],
+            'triceps': ['triceps', 'tricep', 'tri', 'tris'],
+            'forearms': ['forearms', 'forearm', 'wrist'],
+            'legs': ['legs', 'leg', 'leg day'],
+            'quads': ['quads', 'quadriceps', 'quad day'],
+            'hamstrings': ['hamstrings', 'hamstring', 'hams'],
+            'glutes': ['glutes', 'glute', 'butt'],
+            'calves': ['calves', 'calf', 'calf raise'],
+            'core': ['core', 'abdominals', 'abs', 'ab workout', 'ab', 'abdominal', 'obliques'],
+
+            'push': ['push', 'push day', 'push workout'],
+            'pull': ['pull', 'pull day', 'pull workout'],
+            'upper': ['upper', 'upper body', 'upper day', 'upper body workout', 'upper workout'],
+            'lower': ['lower', 'lower body', 'lower day', 'lower body workout', 'lower workout'],
+            'full': ['full', 'full body', 'full day', 'full body workout', 'full workout'],
+
+            'chest_triceps': ['chest and triceps', 'chest & triceps', 'chest/triceps', 'chest tri', 'chest tris', 'chest and tris', 'chest and tricep', 'chest tri day'],
+            'back_biceps': ['back and biceps', 'back & biceps', 'back/biceps', 'back bi', 'back bis', 'back and bis', 'back and bicep', 'back bi day'],
+            'chest_shoulder_triceps': ['chest shoulder triceps', 'chest & shoulder & triceps', 'chest/shoulder/triceps', 'chest shoulder tri', 'chest shoulder tris', 'chest shoulder and triceps', 'chest shoulder and tris'],
+            'chest_back': ['chest and back', 'chest & back', 'chest/back', 'chest bi tri', 'chest bis tris', 'chest and bis tris', 'chest and back day'],
+            'back_shoulders': ['back and shoulders', 'back & shoulders', 'back/shoulders', 'back shoulder', 'back and shoulder', 'back and shoulders day', 'back shoulders', 'back and shoulder day'],
+            'shoulder_arms': ['shoulder and arms', 'shoulder & arms', 'shoulder/arms', 'shoulder arm', 'shoulder and arm', 'shoulder arms day', 'sarms', 'sharms', 'shoulder and arms day', 'sarm day', 'sharm day'],  
         }
-    
-    def _preprocess_text(self, text: str) -> str:
-        """
-        Clean and preprocess the input text
-        """
-        # Convert to lowercase
-        text = text.lower().strip()
-        
-        # Remove extra whitespace
-        text = re.sub(r'\s+', ' ', text)
-        
-        # Normalize common patterns
-        text = re.sub(r'\bx\b', ' x ', text)  # Ensure space around 'x'
-        text = re.sub(r'(\d+)\s*x\s*(\d+)', r'\1 x \2', text)  # "3x10" -> "3 x 10"
-        
-        # Handle common separators
-        text = re.sub(r'\s*[,;]\s*', ' and ', text)  # Replace commas with 'and'
-        text = re.sub(r'\s+and\s+and\s+', ' and ', text)  # Remove duplicate 'and'
-        
-        return text
-    
-    def _enhanced_parse_exercises(self, text: str) -> List[Dict]:
-        """
-        Enhanced exercise parsing with better pattern matching
-        """
-        exercises = []
-        
-        # Pattern 1: "3 sets of 10 reps bench press" or "3x10 bench press"
-        matches = re.finditer(self.workout_patterns['sets_reps_exercise'], text)
-        for match in matches:
-            sets = int(match.group(1))
-            reps = int(match.group(2))
-            exercise_name = match.group(3).strip()
+
+        self.workout_type_priority = [
+            # Compound types first (most specific)
+            'chest_triceps', 'back_biceps', 'chest_shoulder_triceps', 
+            'chest_back', 'back_shoulders', 'shoulder_arms',
             
-            if self._is_valid_exercise_name(exercise_name):
-                exercises.append({
-                    'name': self._clean_exercise_name(exercise_name),
-                    'sets': sets,
-                    'reps': reps,
-                    'weight': None,
-                    'duration': None,
-                    'source': 'sets_reps_exercise'
-                })
-        
-        # Pattern 2: "bench press 3x10"
-        matches = re.finditer(self.workout_patterns['exercise_sets_reps'], text)
-        for match in matches:
-            exercise_name = match.group(1).strip()
-            sets = int(match.group(2))
-            reps = int(match.group(3))
+            # Movement patterns
+            'push', 'pull', 'upper', 'lower', 'full',
             
-            if self._is_valid_exercise_name(exercise_name):
-                exercises.append({
-                    'name': self._clean_exercise_name(exercise_name),
-                    'sets': sets,
-                    'reps': reps,
-                    'weight': None,
-                    'duration': None,
-                    'source': 'exercise_sets_reps'
-                })
-        
-        # Pattern 3: Weight-based exercises
-        for pattern_name in ['exercise_weight', 'weight_exercise']:
-            matches = re.finditer(self.workout_patterns[pattern_name], text)
-            for match in matches:
-                if pattern_name == 'exercise_weight':
-                    exercise_name = match.group(1).strip()
-                    weight = int(match.group(2))
-                else:  # weight_exercise
-                    weight = int(match.group(1))
-                    exercise_name = match.group(2).strip()
-                
-                if self._is_valid_exercise_name(exercise_name):
-                    exercises.append({
-                        'name': self._clean_exercise_name(exercise_name),
-                        'sets': 1,  # Default
-                        'reps': None,
-                        'weight': weight,
-                        'duration': None,
-                        'source': pattern_name
-                    })
-        
-        # Pattern 4: Duration exercises
-        matches = re.finditer(self.workout_patterns['duration_exercise'], text)
-        for match in matches:
-            duration = int(match.group(1))
-            exercise_name = match.group(2).strip()
-            
-            if self._is_valid_exercise_name(exercise_name):
-                exercises.append({
-                    'name': self._clean_exercise_name(exercise_name),
-                    'sets': 1,
-                    'reps': None,
-                    'weight': None,
-                    'duration': duration,
-                    'source': 'duration_exercise'
-                })
-        
-        # Pattern 5: Simple mentions
-        if not exercises:  # Only if no other patterns matched
-            matches = re.finditer(self.workout_patterns['simple_mentions'], text)
-            for match in matches:
-                exercise_name = match.group(1).strip()
-                if self._is_valid_exercise_name(exercise_name):
-                    exercises.append({
-                        'name': self._clean_exercise_name(exercise_name),
-                        'sets': 1,
-                        'reps': None,
-                        'weight': None,
-                        'duration': None,
-                        'source': 'simple_mentions'
-                    })
-        
-        # Remove duplicates and clean up
-        exercises = self._remove_duplicate_exercises(exercises)
-        
-        return exercises
-    
-    def _is_valid_exercise_name(self, name: str) -> bool:
-        """
-        Check if a name looks like a valid exercise
-        """
-        if not name or len(name.strip()) < 3:
-            return False
-        
-        # Remove stop words and check if anything meaningful remains
-        words = name.split()
-        meaningful_words = [w for w in words if w not in self.stop_words]
-        
-        return len(meaningful_words) >= 1 and len(' '.join(meaningful_words)) >= 3
-    
-    def _clean_exercise_name(self, name: str) -> str:
-        """
-        Clean and normalize exercise name
-        """
-        # Remove stop words
-        words = name.split()
-        clean_words = [w for w in words if w not in self.stop_words]
-        name = ' '.join(clean_words)
-        
-        # Apply mappings
-        name_lower = name.lower()
-        if name_lower in self.exercise_mappings:
-            name = self.exercise_mappings[name_lower]
-        
-        # Handle plurals
-        if name.endswith('s') and name[:-1] in self.exercise_mappings:
-            name = self.exercise_mappings[name[:-1]]
-        
-        # Title case
-        return name.title()
-    
-    def _remove_duplicate_exercises(self, exercises: List[Dict]) -> List[Dict]:
-        """
-        Remove duplicate exercises, keeping the one with most information
-        """
-        unique_exercises = {}
-        
-        for exercise in exercises:
-            name = exercise['name']
-            
-            if name not in unique_exercises:
-                unique_exercises[name] = exercise
-            else:
-                # Keep the one with more information
-                existing = unique_exercises[name]
-                current = exercise
-                
-                # Score based on available information
-                existing_score = sum([
-                    1 if existing.get('sets') else 0,
-                    1 if existing.get('reps') else 0,
-                    1 if existing.get('weight') else 0,
-                    1 if existing.get('duration') else 0
-                ])
-                
-                current_score = sum([
-                    1 if current.get('sets') else 0,
-                    1 if current.get('reps') else 0,
-                    1 if current.get('weight') else 0,
-                    1 if current.get('duration') else 0
-                ])
-                
-                if current_score > existing_score:
-                    unique_exercises[name] = current
-        
-        return list(unique_exercises.values())
-    
-    def _enhanced_match_exercises(self, exercises: List[Dict], user) -> List[Dict]:
-        """
-        Enhanced exercise matching with fuzzy search
-        """
-        matched_exercises = []
-        
-        for exercise_data in exercises:
-            exercise_name = exercise_data['name']
-            
-            # Try exact match first
-            db_exercise = Exercise.objects.filter(name__iexact=exercise_name).first()
-            
-            if not db_exercise:
-                # Try fuzzy matching with contains
-                db_exercise = Exercise.objects.filter(name__icontains=exercise_name).first()
-            
-            if not db_exercise:
-                # Try matching individual words
-                words = exercise_name.split()
-                for word in words:
-                    if len(word) > 3:  # Only try meaningful words
-                        db_exercise = Exercise.objects.filter(name__icontains=word).first()
-                        if db_exercise:
-                            break
-            
-            if not db_exercise:
-                # Try base exercise match
-                base_exercise = BaseExercise.objects.filter(name__icontains=exercise_name).first()
-                if base_exercise:
-                    db_exercise = Exercise.objects.filter(base_exercise=base_exercise).first()
-            
-            # Calculate match confidence
-            match_confidence = 0.0
-            if db_exercise:
-                # Perfect match
-                if db_exercise.name.lower() == exercise_name.lower():
-                    match_confidence = 1.0
-                # Contains match
-                elif exercise_name.lower() in db_exercise.name.lower():
-                    match_confidence = 0.8
-                # Partial match
-                else:
-                    match_confidence = 0.6
-            
-            # Get suggestions
-            suggestions = self._get_exercise_suggestions(exercise_name)
-            
-            # Add to results
-            exercise_data['db_match'] = db_exercise
-            exercise_data['match_confidence'] = match_confidence
-            exercise_data['suggested_exercises'] = suggestions
-            
-            matched_exercises.append(exercise_data)
-        
-        return matched_exercises
-    
-    def _enhanced_generate_workout_name(self, text: str, exercises: List[Dict]) -> str:
-        """
-        Generate better workout names
-        """
-        # Try to extract explicit workout name
-        name_patterns = [
-            r'(?:workout|training|session):\s*([^,\n.]+)',
-            r'(?:did|completed)\s+(?:a\s+)?([^,\n.]+?)\s+(?:workout|training)',
-            r'^([^,\n.]+?)\s+(?:workout|training|session)',
-            r'(?:today|yesterday)(?:\s+i)?\s+(?:did|had)\s+([^,\n.]+?)(?:\s+with|\s+including|$)',
+            # Individual muscles last
+            'chest', 'back', 'shoulders', 'arms', 'legs', 'biceps', 'triceps',
+            'front_delts', 'side_delts', 'rear_delts', 'forearms', 'quads', 
+            'hamstrings', 'glutes', 'calves', 'core'
         ]
-        
-        for pattern in name_patterns:
-            match = re.search(pattern, text.lower())
-            if match:
-                name = match.group(1).strip()
-                if len(name) > 2 and not any(word in name for word in ['sets', 'reps', 'lbs']):
-                    return name.title()
-        
-        # Generate name based on workout type
-        workout_type = self._detect_workout_type(text, exercises)
-        if workout_type:
-            return f"{workout_type.title()} Workout"
-        
-        # Generate name based on exercises
-        if exercises:
-            exercise_names = [ex['name'] for ex in exercises if ex.get('db_match')]
-            if exercise_names:
-                if len(exercise_names) == 1:
-                    return f"{exercise_names[0]} Workout"
-                elif len(exercise_names) <= 3:
-                    return f"{', '.join(exercise_names)} Workout"
-                else:
-                    return f"{len(exercise_names)} Exercise Workout"
-        
-        # Default name
-        return f"Workout - {date.today().strftime('%m/%d/%Y')}"
     
-    def _detect_workout_type(self, text: str, exercises: List[Dict]) -> Optional[str]:
+    def start_conversation(self, initial_input: str, user) -> Dict:
         """
-        Detect the type of workout based on keywords and exercises
+        Start a new workout conversation
+        """
+        session_data = {
+            'state': self.STATES['INITIAL'],
+            'user_id': user.id,
+            'workout_type': None,
+            'exercises': [],
+            'raw_inputs': [initial_input],
+            'conversation_history': []
+        }
+        
+        # Process the initial input
+        return self.process_input(initial_input, session_data)
+    
+    def continue_conversation(self, user_input: str, session_data: Dict) -> Dict:
+        """
+        Continue an existing conversation
+        """
+        session_data['raw_inputs'].append(user_input)
+        return self.process_input(user_input, session_data)
+    
+    def process_input(self, user_input: str, session_data: Dict) -> Dict:
+        """
+        Process user input based on current conversation state
+        """
+        current_state = session_data['state']
+        
+        if current_state == self.STATES['INITIAL']:
+            return self._handle_initial_input(user_input, session_data)
+        elif current_state == self.STATES['WORKOUT_TYPE']:
+            return self._handle_workout_type(user_input, session_data)
+        elif current_state == self.STATES['COLLECTING_EXERCISES']:
+            return self._handle_exercise_input(user_input, session_data)
+        elif current_state == self.STATES['CONFIRM_WORKOUT']:
+            return self._handle_confirmation(user_input, session_data)
+        else:
+            return self._create_response("I'm not sure what to do next. Let's start over.", session_data)
+    
+    def _handle_initial_input(self, user_input: str, session_data: Dict) -> Dict:
+        """
+        Handle the initial input to determine workout type
+        """
+        workout_type = self._extract_workout_type(user_input)
+        
+        if workout_type:
+            session_data['workout_type'] = workout_type
+            session_data['state'] = self.STATES['COLLECTING_EXERCISES']
+            
+            response = f"Great! I'll help you create a {workout_type} workout. Please tell me what exercises you did. You can list them one by one with details like:\n\n"
+            response += "• Exercise name: working sets, max weight/reps\n"
+            response += "• Example: 'Bench press: 3 working sets, 225 max 4 reps'\n\n"
+            response += "Go ahead and tell me your first exercise:"
+            
+            return self._create_response(response, session_data, needs_input=True)
+        else:
+            # Ask for clarification
+            session_data['state'] = self.STATES['WORKOUT_TYPE']
+            response = "I'd love to help you create a workout! What type of workout did you do? (e.g., chest and triceps, back and biceps, legs, push, pull, etc.)"
+            return self._create_response(response, session_data, needs_input=True)
+    
+    def _handle_workout_type(self, user_input: str, session_data: Dict) -> Dict:
+        """
+        Handle workout type specification
+        """
+        workout_type = self._extract_workout_type(user_input)
+        
+        if workout_type:
+            session_data['workout_type'] = workout_type
+            session_data['state'] = self.STATES['COLLECTING_EXERCISES']
+            
+            response = f"Perfect! {workout_type.title()} workout it is. Now tell me what exercises you did with details like working sets and max weights:"
+            return self._create_response(response, session_data, needs_input=True)
+        else:
+            response = "I didn't catch the workout type. Could you specify what muscle groups or workout type? (chest, back, legs, push, pull, etc.)"
+            return self._create_response(response, session_data, needs_input=True)
+    
+    def _handle_exercise_input(self, user_input: str, session_data: Dict) -> Dict:
+        """
+        Handle exercise input and details
+        """
+        # Check for completion signals
+        completion_signals = ['done', 'finished', 'that\'s it', 'complete', 'save', 'end']
+        if any(signal in user_input.lower() for signal in completion_signals):
+            if session_data['exercises']:
+                return self._move_to_confirmation(session_data)
+            else:
+                response = "You haven't added any exercises yet. Please tell me about your exercises first."
+                return self._create_response(response, session_data, needs_input=True)
+        
+        # Parse exercises from input
+        exercises = self._parse_exercise_details(user_input)
+        
+        if exercises:
+            # Add to session
+            session_data['exercises'].extend(exercises)
+            
+            # Create response
+            response = f"Got it! Added {len(exercises)} exercise(s):\n"
+            for ex in exercises:
+                response += f"• {ex['name']}"
+                if ex.get('working_sets'):
+                    response += f" - {ex['working_sets']} working sets"
+                if ex.get('max_weight'):
+                    response += f" - {ex['max_weight']} max"
+                if ex.get('max_weight_reps'):
+                    response += f" ({ex['max_weight_reps']} reps)"
+                response += "\n"
+            
+            response += "\nTell me about your next exercise, or say 'done' when you're finished:"
+            return self._create_response(response, session_data, needs_input=True)
+        else:
+            response = "I couldn't parse that exercise. Try this format:\n"
+            response += "'Exercise name: X working sets, Y lbs/plates max'\n"
+            response += "Example: 'Bench press: 3 working sets, 225 max 4 reps'"
+            return self._create_response(response, session_data, needs_input=True)
+    
+    def _handle_confirmation(self, user_input: str, session_data: Dict) -> Dict:
+        """
+        Handle workout confirmation
+        """
+        user_input_lower = user_input.lower().strip()
+        
+        if any(word in user_input_lower for word in ['yes', 'y', 'correct', 'good', 'save', 'confirm']):
+            # Create the workout
+            result = self._create_workout_from_session(session_data)
+            session_data['state'] = self.STATES['COMPLETED']
+            
+            if result['success']:
+                response = f"✅ Great! Your {session_data['workout_type']} workout has been saved successfully with {len(session_data['exercises'])} exercises!"
+                return self._create_response(response, session_data, completed=True, workout=result['workout'])
+            else:
+                response = f"❌ Sorry, there was an error saving your workout: {result['message']}"
+                return self._create_response(response, session_data, error=True)
+        
+        elif any(word in user_input_lower for word in ['no', 'n', 'wrong', 'edit', 'change']):
+            # Go back to exercise collection
+            session_data['state'] = self.STATES['COLLECTING_EXERCISES']
+            response = "No problem! Tell me what you'd like to change or add more exercises:"
+            return self._create_response(response, session_data, needs_input=True)
+        
+        else:
+            response = "Please respond with 'yes' to save the workout or 'no' to make changes."
+            return self._create_response(response, session_data, needs_input=True)
+    
+    def _extract_workout_type(self, text: str) -> Optional[str]:
+        """
+        Extract workout type from text
         """
         text_lower = text.lower()
         
-        # Check for explicit workout type mentions
-        for workout_type, keywords in self.workout_types.items():
-            if any(keyword in text_lower for keyword in keywords):
-                return workout_type
-        
-        # Check based on exercises
-        if exercises:
-            exercise_names = ' '.join([ex['name'].lower() for ex in exercises])
-            for workout_type, keywords in self.workout_types.items():
-                if any(keyword in exercise_names for keyword in keywords):
-                    return workout_type
-        
+        # Look for explicit workout type mentions
+        for workout_type in self.workout_type_priority:
+            if workout_type in self.workout_types:
+                keywords = self.workout_types[workout_type]
+                for keyword in keywords:
+                    if keyword in text_lower:
+                        return self._format_workout_name(workout_type)
+                        
         return None
+
+    def _format_workout_name(self, workout_type: str) -> str:
+        """
+        Format workout type into a proper workout name
+        """
+
+        formatting_map = {
+            'chest_triceps': 'chest and triceps',
+            'back_biceps': 'back and biceps',
+            'chest_shoulder_triceps': 'chest, shoulders and triceps',
+            'chest_back': 'chest and back',
+            'back_shoulders': 'back and shoulders',
+            'shoulder_arms': 'shoulders and arms',
+            # Individual muscles and others stay as-is
+            'chest': 'chest',
+            'upperchest': 'upper chest',
+            'midchest': 'mid chest',
+            'lowerchest': 'lower chest',
+            'back': 'back',
+            'upperback': 'upper back',
+            'midback': 'mid back',
+            'lowerback': 'lower back',
+            'lats': 'lats',
+            'traps': 'traps',
+            'shoulders': 'shoulders',
+            'frontdelt': 'front delts',
+            'sidedelt': 'side delts',
+            'reardelt': 'rear delts',
+            'arms': 'arms',
+            'biceps': 'biceps',
+            'triceps': 'triceps',
+            'forearms': 'forearms',
+            'legs': 'legs',
+            'quads': 'quads',
+            'hamstrings': 'hamstrings',
+            'glutes': 'glutes', 
+            'calves': 'calves',
+            'abductors': 'abductors',
+            'adductors': 'adductors',
+            'abs': 'abs',
+            'obliques': 'obliques',
+        }
+
+        # Replace underscores with spaces and capitalize
+        return formatting_map.get(workout_type, workout_type.replace('_', ' '))
     
-    def _enhanced_calculate_confidence(self, parsed_exercises: List[Dict], 
-                                     matched_exercises: List[Dict], text: str) -> float:
+    def _parse_exercise_details(self, text: str) -> List[Dict]:
         """
-        Enhanced confidence calculation
+        Parse exercise details from text
         """
-        if not parsed_exercises:
-            return 0.1
+        exercises = []
         
-        confidence = 0.0
+        # Split by common separators and process each line
+        lines = re.split(r'\n|;', text.strip())
         
-        # Base confidence for finding exercises
-        confidence += min(0.3, len(parsed_exercises) * 0.1)
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            exercise_data = self._parse_single_exercise(line)
+            if exercise_data:
+                exercises.append(exercise_data)
         
-        # Confidence for database matches
-        total_matches = sum(1 for ex in matched_exercises if ex.get('db_match'))
-        if parsed_exercises:
-            match_ratio = total_matches / len(parsed_exercises)
-            confidence += match_ratio * 0.4
-        
-        # Confidence for detailed information
-        detailed_exercises = sum(1 for ex in parsed_exercises 
-                               if ex.get('sets') or ex.get('reps') or ex.get('weight') or ex.get('duration'))
-        if parsed_exercises:
-            detail_ratio = detailed_exercises / len(parsed_exercises)
-            confidence += detail_ratio * 0.2
-        
-        # Confidence for workout keywords
-        workout_keywords = ['workout', 'exercise', 'training', 'sets', 'reps', 'lbs', 'kg']
-        keyword_count = sum(1 for keyword in workout_keywords if keyword in text.lower())
-        confidence += min(0.1, keyword_count * 0.02)
-        
-        return min(0.95, confidence)
+        return exercises
     
-    def create_workout_from_nlp(self, nlp_result: Dict, user) -> Dict:
+    def _parse_single_exercise(self, text: str) -> Optional[Dict]:
         """
-        Create a workout from NLP parsing results with proper user handling
+        Fixed version - Parse a single exercise with details
         """
-        if not nlp_result.get('success'):
-            return {
-                'success': False,
-                'message': 'Invalid NLP result'
-            }
+        # Check for detailed exercise pattern: "Exercise: details"
+        text = text.strip()
+        if not text:
+            return None
         
+        detailed_match = re.search(self.exercise_patterns['detailed_exercise'], text, re.IGNORECASE)
+        
+        if not detailed_match:
+            words = text.split()
+            if len(words) >= 2:
+                # Assume first word is exercise name, rest is details
+                exercise_name = ' '.join(words[:3])
+                details_text = ' '.join(words[3:])
+            else:
+                return None
+        else:
+            exercise_name = detailed_match.group(1).strip()
+            details_text = detailed_match.group(2).strip()
+        
+        # Parse details
+        exercise_data = {
+            'name': self._normalize_exercise_name(exercise_name),
+            'working_sets': None,
+            'max_weight': None,
+            'max_weight_reps': None,
+            'weight_type': 'lbs',  # 'lbs' or 'plates'
+            'variations': [],
+            'raw_details': details_text,
+            'plates': None
+        }
+        
+        # 🔧 FIX 1: Check for variations in BOTH exercise name AND details
+        full_text_for_variations = f"{exercise_name} {details_text}".lower()
+        
+        # Split details by commas and semicolons for processing
+        detail_parts = re.split(r'[,;]', details_text)
+        
+        # Process each part separately for sets/weights/reps
+        for part in detail_parts:
+            part = part.strip()
+            if not part:
+                continue
+            
+            # Check for working sets (with typo tolerance)
+            if not exercise_data['working_sets']:
+                sets_match = re.search(self.exercise_patterns['working_sets'], part, re.IGNORECASE)
+                if sets_match:
+                    exercise_data['working_sets'] = int(sets_match.group(1))
+                    continue
+            
+            # Check for max weight - order matters (plates first, then lbs, then simple)
+            if not exercise_data['max_weight']:
+                # Try plates pattern first (highest priority)
+                plates_match = re.search(self.exercise_patterns['max_weight_plates'], part, re.IGNORECASE)
+                if plates_match:
+                    plates = int(plates_match.group(1))
+                    exercise_data['max_weight'] = plates * 45  # Convert to lbs
+                    exercise_data['weight_type'] = 'plates'
+                    exercise_data['plates'] = plates
+                    continue
+                
+                # Try explicit lbs pattern
+                lbs_match = re.search(self.exercise_patterns['max_weight_lbs'], part, re.IGNORECASE)
+                if lbs_match:
+                    exercise_data['max_weight'] = int(lbs_match.group(1))
+                    exercise_data['weight_type'] = 'lbs'
+                    continue
+                
+                # Try simple max pattern (assume lbs if no unit specified)
+                simple_match = re.search(self.exercise_patterns['max_weight_simple'], part, re.IGNORECASE)
+                if simple_match:
+                    exercise_data['max_weight'] = int(simple_match.group(1))
+                    exercise_data['weight_type'] = 'lbs'
+                    continue
+            
+            # Check for max reps
+            if not exercise_data['max_weight_reps']:
+                reps_match = re.search(self.exercise_patterns['max_reps'], part, re.IGNORECASE)
+                if reps_match:
+                    exercise_data['max_weight_reps'] = int(reps_match.group(1))
+                    continue
+        
+        # 🔧 FIX 2: Check for variations in the FULL TEXT (name + details)
+        for variation_name, pattern in self.exercise_patterns.items():
+            if variation_name.startswith(('max_', 'working_', 'detailed_')):
+                continue
+            
+            # Search in the full text (exercise name + details)
+            if re.search(pattern, full_text_for_variations, re.IGNORECASE):
+                variation_display = variation_name.replace('_', ' ').title()
+                if variation_display not in exercise_data['variations']:
+                    exercise_data['variations'].append(variation_display)
+        
+        return exercise_data
+    
+    def _normalize_exercise_name(self, name: str) -> str:
+        """
+        Normalize exercise name
+        """
+        # Clean up the name
+        name = name.strip().title()
+        
+        # Common mappings
+        mappings = {
+            'T Bar Row': 'T-Bar Row',
+            'Lat Pulldown': 'Lat Pulldown',
+            'Pec Deck': 'Pec Deck',
+            'Preacher Curl': 'Preacher Curl',
+        }
+        
+        return mappings.get(name, name)
+    
+    def _move_to_confirmation(self, session_data: Dict) -> Dict:
+        """
+        Move to confirmation state and show workout summary
+        """
+        session_data['state'] = self.STATES['CONFIRM_WORKOUT']
+        
+        response = f"Here's your {session_data['workout_type']} workout:\n\n"
+        response += f"**Workout Name:** {session_data['workout_type'].title()} Day\n\n"
+        
+        for i, exercise in enumerate(session_data['exercises'], 1):
+            response += f"**Exercise {i}:** {exercise['name']}\n"
+            
+            if exercise.get('variations'):
+                response += f"Notes: {', '.join(exercise['variations'])}\n"
+            
+            if exercise.get('working_sets'):
+                response += f"Working sets: {exercise['working_sets']}\n"
+            
+            if exercise.get('max_weight'):
+                response += f"Max weight: {exercise['max_weight']}"
+                if exercise.get('weight_type') == 'plates':
+                    response += " lbs"
+                else:
+                    response += " lbs"
+                response += "\n"
+            
+            if exercise.get('max_weight_reps'):
+                response += f"Max weight reps: {exercise['max_weight_reps']}\n"
+            
+            response += "\n"
+        
+        response += "Does everything look correct? (yes/no)"
+        
+        return self._create_response(response, session_data, needs_input=True)
+    
+    def _create_workout_from_session(self, session_data: Dict) -> Dict:
+        """
+        Create workout from session data
+        """
         try:
-            # Ensure user is a proper User instance
-            if not isinstance(user, User):
-                return {
-                    'success': False,
-                    'message': 'Invalid user object'
-                }
+            from django.contrib.auth.models import User
+            user = User.objects.get(id=session_data['user_id'])
             
             with transaction.atomic():
-                # Create the workout
+                # Create workout
+                workout_name = f"{session_data['workout_type'].title()} Day"
                 workout = Workout.objects.create(
                     user=user,
-                    name=nlp_result['workout_name']
+                    name=workout_name
                 )
                 
-                # Add exercises to workout
-                order = 0
-                for exercise_data in nlp_result['exercises']:
-                    if exercise_data.get('db_match'):
-                        exercise = exercise_data['db_match']
-                        WorkoutExerciseItem.objects.create(
-                            workout=workout,
-                            content_type=ContentType.objects.get_for_model(Exercise),
-                            object_id=exercise.id,
-                            order=order
-                        )
-                        order += 1
+                # Add exercises
+                for order, exercise_data in enumerate(session_data['exercises']):
+                    # Find or create exercise
+                    exercise = self._find_or_create_exercise(exercise_data, user)
+                    
+                    # Create workout item
+                    WorkoutExerciseItem.objects.create(
+                        workout=workout,
+                        content_type=ContentType.objects.get_for_model(Exercise),
+                        object_id=exercise.id,
+                        order=order,
+                        working_sets=exercise_data.get('working_sets', 0),
+                        max_weight=exercise_data.get('max_weight', 0),
+                        max_weight_reps=exercise_data.get('max_weight_reps', 0),
+                        notes=', '.join(exercise_data.get('variations', []))
+                    )
                 
-                # Add to today's daily log
+                # Add to daily log
                 daily_log, created = DailyLog.objects.get_or_create(
                     user=user,
                     date=date.today()
                 )
                 daily_log.workouts.add(workout)
                 
-                logger.info(f"Created workout: {workout.name} with {order} exercises")
-                
                 return {
                     'success': True,
                     'workout': workout,
-                    'message': f'Successfully created workout "{workout.name}" with {order} exercises'
+                    'message': 'Workout created successfully'
                 }
         
         except Exception as e:
             logger.error(f"Error creating workout: {str(e)}")
             return {
                 'success': False,
-                'message': f'Error creating workout: {str(e)}'
+                'message': str(e)
             }
-    
-    # Keep all the other methods from the original NLPEngine
-    def _classify_as_workout(self, text: str) -> bool:
-        """Classify if the input text is workout-related"""
-        workout_keywords = [
-            'workout', 'exercise', 'training', 'gym', 'lift', 'run', 'pushup', 
-            'pullup', 'squat', 'bench', 'deadlift', 'curl', 'press', 'row',
-            'sets', 'reps', 'lbs', 'kg', 'pounds', 'minutes', 'cardio'
-        ]
-        text_lower = text.lower()
-        workout_score = sum(1 for keyword in workout_keywords if keyword in text_lower)
-        return workout_score >= 1
-    
-    def _get_exercise_suggestions(self, exercise_name: str) -> List:
-        """Get exercise suggestions for unmatched exercises"""
-        words = exercise_name.split()
-        suggestions = []
         
-        for word in words:
-            if len(word) > 3:
-                matches = Exercise.objects.filter(name__icontains=word)[:3]
-                suggestions.extend(matches)
-        
-        # Remove duplicates and limit to 5
-        seen_ids = set()
-        unique_suggestions = []
-        for suggestion in suggestions:
-            if suggestion.id not in seen_ids:
-                unique_suggestions.append(suggestion)
-                seen_ids.add(suggestion.id)
-                if len(unique_suggestions) >= 5:
-                    break
-        
-        return unique_suggestions
-    
-    def create_missing_exercises(self, nlp_result: Dict, user) -> Dict:
-        """Create missing exercises that weren't found in the database"""
-        created_exercises = []
-        
-        for exercise_data in nlp_result.get('exercises', []):
-            if not exercise_data.get('db_match'):
-                try:
-                    # Create a basic exercise
-                    exercise = Exercise.objects.create(
-                        name=exercise_data['name'],
-                        notes=f"Auto-created from NLP input"
-                    )
-                    
-                    # Update the exercise data
-                    exercise_data['db_match'] = exercise
-                    exercise_data['match_confidence'] = 0.8  # Lower confidence for auto-created
-                    
-                    created_exercises.append(exercise)
-                    
-                except Exception as e:
-                    logger.error(f"Error creating exercise {exercise_data['name']}: {e}")
-        
+    def get_improved_exercise_patterns():
+        """
+        Return improved exercise patterns that are more flexible
+        """
         return {
-            'created_exercises': created_exercises,
-            'count': len(created_exercises)
+            # Main exercise pattern: "Exercise name: details"
+            'detailed_exercise': r'^([^:]+):\s*(.+)$',
+            
+            # Working sets patterns - more flexible to handle typos and variations
+            'working_sets': r'(\d+)\s*(?:working\s+)?(?:workings\s+)?sets?',
+            
+            # Max weight patterns - improved to handle different formats
+            'max_weight_plates': r'(\d+)\s*(?:plates?|plate)\s*(?:max|maximum)?',
+            'max_weight_lbs': r'(\d+)\s*(?:lb|lbs|pounds?)\s*(?:max|maximum)?',
+            'max_weight_simple': r'(\d+)\s*(?:max|maximum)(?!\s*(?:reps?|rep))',
+            'max_reps': r'(\d+)\s*(?:reps?\s*)?(?:max|maximum)(?:\s*reps?)?',
+            
+            # 🔧 IMPROVED: More flexible variation patterns
+            'single_arm': r'\bsingle\s+arm\b',
+            'alternating': r'\balternating\b',
+            'seated': r'\bseated\b',
+            'standing': r'\bstanding\b',
+            'lying': r'\blying\b',
+            'incline': r'\bincline\b',
+            'decline': r'\bdecline\b',
+            
+            # Equipment patterns - made more flexible
+            'plate_loaded': r'\bplate\s*loaded\b',
+            'pin_loaded': r'\bpin\s*loaded\b',
+            'machine': r'\bmachine\b',
+            'cable': r'\bcable\b',
+            'dumbbell': r'\bdumbbell\b',
+            'barbell': r'\bbarbell\b',
+            
+            # Grip and bar variations
+            'flat_bar': r'\bflat\s+bar\b',
+            'ez_bar': r'\bez\s+bar\b',
+            'neutral_grip': r'\bneutral\s+grip\b',
+            'wide_grip': r'\bwide\s+grip\b',
+            'close_grip': r'\bclose\s+grip\b',
+            'overhand': r'\boverhand\b',
+            'underhand': r'\bunderhand\b',
+            
+            # Additional modifiers
+            'unilateral': r'\bunilateral\b',
+            'bilateral': r'\bbilateral\b',
+            'partial_rep': r'\bpartial\s+rep\b',
+            'pause_rep': r'\bpause\s+rep\b',
+            'tempo': r'\btempo\b',
         }
     
-    def get_workout_summary(self, nlp_result: Dict) -> str:
-        """Generate a human-readable summary of the parsed workout"""
-        if not nlp_result.get('success'):
-            return "Unable to parse workout"
+    def _find_or_create_exercise(self, exercise_data: Dict, user) -> Exercise:
+        """
+        Find existing exercise or create new one
+        """
+        exercise_name = exercise_data['name']
         
-        summary_parts = [f"Workout: {nlp_result['workout_name']}"]
+        # Try to find existing exercise
+        exercise = Exercise.objects.filter(name__icontains=exercise_name).first()
         
-        exercises = nlp_result.get('exercises', [])
-        for exercise in exercises:
-            parts = [exercise['name']]
-            
-            if exercise.get('sets') and exercise.get('reps'):
-                parts.append(f"{exercise['sets']}x{exercise['reps']}")
-            elif exercise.get('reps'):
-                parts.append(f"{exercise['reps']} reps")
-            
-            if exercise.get('weight'):
-                parts.append(f"{exercise['weight']} lbs")
-            
-            if exercise.get('duration'):
-                parts.append(f"{exercise['duration']} minutes")
-            
-            if not exercise.get('db_match'):
-                parts.append("(not found in database)")
-            
-            summary_parts.append("  • " + " - ".join(parts))
+        if not exercise:
+            # Create new exercise
+            exercise = Exercise.objects.create(
+                name=exercise_name,
+                notes=f"Auto-created from conversational input"
+            )
         
-        summary_parts.append(f"Confidence: {nlp_result['confidence']:.1%}")
-        
-        return "\n".join(summary_parts)
+        return exercise
+    
+    def _create_response(self, message: str, session_data: Dict, 
+                        needs_input: bool = False, completed: bool = False, 
+                        error: bool = False, workout=None) -> Dict:
+        """
+        Create a standardized response
+        """
+        return {
+            'message': message,
+            'session_data': session_data,
+            'needs_input': needs_input,
+            'completed': completed,
+            'error': error,
+            'workout': workout,
+            'state': session_data['state']
+        }
