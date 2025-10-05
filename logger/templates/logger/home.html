@@ -1,419 +1,282 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Workout Tracker Home</title>
+    <title>Portfolio</title>
     <style>
+        /* ===== Global Styles ===== */
         body {
-            background-color: #0d0d0d;
-            color: white;
+            background-color: #fff;
+            color: #000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
             margin: 0;
             padding: 0;
         }
-        .container {
-            padding: 60px 20px;
-        }
-        h1 {
-            font-size: 3em;
-            margin-bottom: 10px;
-        }
-        h2 {
-            margin-top: 40px;
-        }
-        p, a {
-            font-size: 1.2em;
-        }
         a {
-            color: #f0f0f0;
-            background-color: #222;
-            padding: 12px 24px;
-            border-radius: 6px;
             text-decoration: none;
-            display: inline-block;
-            margin: 10px;
             transition: 0.3s ease;
         }
-        a:hover {
-            background-color: #444;
-        }
-        .hero {
-            background-image: url("https://images.unsplash.com/photo-1605296867304-46d5465a13f1");
-            background-size: cover;
-            background-position: center;
-            height: 400px;
-            position: relative;
-        }
-        .hero::after {
-            content: "";
-            background-color: rgba(0, 0, 0, 0.6);
-            position: absolute;
-            inset: 0;
-        }
-        .hero h1 {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1;
-            color: white;
-        }
-        .nlp-highlight {
-            background: linear-gradient(135deg, #007acc, #005a9e);
-            color: white;
-            border: 2px solid #007acc;
-            font-weight: 600;
-        }
-        .nlp-highlight:hover {
-            background: linear-gradient(135deg, #005a9e, #004080);
-            transform: translateY(-2px);
-        }
-        .workout-list {
-            text-align: left;
-            max-width: 600px;
-            margin: 20px auto;
-        }
-        .workout-item {
-            background-color: #1e1e1e;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border-left: 4px solid #007acc;
-        }
-        .workout-name {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .workout-meta {
-            color: #aaa;
-            font-size: 0.9em;
-        }
 
-        /* AI Chatbot Styles */
-        .ai-chatbot-section {
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 30px;
-            background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
-            border-radius: 15px;
-            border: 1px solid #333;
-        }
-
-        .ai-title {
-            color: #007acc;
-            font-size: 2.2em;
-            margin-bottom: 10px;
-            text-shadow: 0 0 10px rgba(0, 122, 204, 0.3);
-        }
-
-        .ai-subtitle {
-            color: #ccc;
-            font-size: 1.1em;
-            margin-bottom: 25px;
-        }
-
-        .quick-suggestions {
+        /* ===== Header / Navbar ===== */
+        .site-header {
+            background: #000;
+            color: #fff;
+            padding: 15px 30px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 25px;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
         }
-
-        .suggestion-btn {
-            background: linear-gradient(135deg, #007acc, #005a9e);
-            color: white;
-            border: none;
-            padding: 10px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.3s ease;
+        .site-header h1 {
+            font-size: 1.4em;
+            margin: 0;
         }
-
-        .suggestion-btn:hover {
-            background: linear-gradient(135deg, #005a9e, #004080);
-            transform: translateY(-2px);
-        }
-
-        .chat-container {
-            background-color: #1e1e1e;
-            border-radius: 10px;
-            overflow: hidden;
-            border: 1px solid #333;
-        }
-
-        .chat-messages {
-            height: 300px;
-            overflow-y: auto;
-            padding: 20px;
-            background-color: #1e1e1e;
-        }
-
-        .message {
-            margin: 15px 0;
-            padding: 12px 16px;
-            border-radius: 18px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-
-        .bot-message {
-            background: linear-gradient(135deg, #333, #444);
-            color: white;
-            margin-right: auto;
-            border-bottom-left-radius: 5px;
-        }
-
-        .user-message {
-            background: linear-gradient(135deg, #007acc, #005a9e);
-            color: white;
-            margin-left: auto;
-            border-bottom-right-radius: 5px;
-            text-align: right;
-        }
-
-        .loading {
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
-        .input-container {
+        .site-header nav {
             display: flex;
-            padding: 15px;
-            background-color: #2d2d2d;
-            border-top: 1px solid #333;
+            gap: 15px;
         }
-
-        #workout-input {
-            flex: 1;
-            padding: 12px 16px;
-            border: 1px solid #444;
-            border-radius: 25px;
-            background-color: #1e1e1e;
-            color: white;
-            font-size: 1em;
-            outline: none;
-        }
-
-        #workout-input:focus {
-            border-color: #007acc;
-            box-shadow: 0 0 10px rgba(0, 122, 204, 0.3);
-        }
-
-        #send-btn {
-            margin-left: 10px;
-            padding: 12px 20px;
-            background: linear-gradient(135deg, #007acc, #005a9e);
-            color: white;
-            border: none;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        #send-btn:hover {
-            background: linear-gradient(135deg, #005a9e, #004080);
-            transform: translateY(-1px);
-        }
-
-        /* Scrollbar styling for chat */
-        .chat-messages::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .chat-messages::-webkit-scrollbar-track {
-            background: #1e1e1e;
-        }
-
-        .chat-messages::-webkit-scrollbar-thumb {
-            background: #444;
+        .site-header nav a {
+            color: #fff;
+            text-decoration: none;
+            background: #333;
+            padding: 8px 16px;
             border-radius: 4px;
+            font-size: 0.95em;
+            transition: background 0.3s ease;
+        }
+        .site-header nav a:hover {
+            background: #555;
+        }
+        .logout {
+            background: #fff !important;
+            color: #000 !important;
+            font-weight: 600;
+        }
+        .logout:hover {
+            background: #f5f5f5 !important;
+        }
+        
+        .welcome-text {
+            font-size: 1.2em;
+            margin-top: 8px;
+            font-weight: 300;
         }
 
-        .chat-messages::-webkit-scrollbar-thumb:hover {
-            background: #555;
+        /* ===== Dashboard Container ===== */
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            border: 1px solid #000;
+            transition: transform 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-3px);
+        }
+        .card h2 {
+            margin-top: 0;
+            color: #000;
+        }
+
+        /* ===== Quick Actions ===== */
+        .quick-actions {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0 40px;
+        }
+        .quick-actions a {
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            background: #000;
+            color: white;
+            border: 1px solid #000;
+        }
+        .quick-actions a:hover {
+            background: white;
+            color: black;
+        }
+
+        /* ===== Nutrition / Daily Log ===== */
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .summary-item {
+            background: #f5f5f5;
+            border-left: 6px solid #000;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+        .summary-item strong {
+            display: block;
+            font-size: 1.3em;
+            margin-bottom: 6px;
+            color: #000;
+        }
+
+        /* ===== Lists (Workouts & Meals) ===== */
+        .list {
+            margin-top: 20px;
+        }
+        .list-item {
+            background: #fff;
+            border-left: 4px solid #000;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            text-align: left;
+            border: 1px solid #000;
+        }
+        .list-item .title {
+            font-weight: 600;
+            color: #000;
+        }
+        .list-item .meta {
+            font-size: 0.9em;
+            color: #444;
+        }
+
+        /* ===== Tom Platz Image ===== */
+        .platz-section {
+            text-align: center;
+            margin: 40px 0;
+        }
+        .platz-section img {
+            max-width: 400px;
+            width: 100%;
+            border-radius: 8px;
+            border: 2px solid #000;
+        }
+        .platz-section p {
+            font-size: 1em;
+            margin-top: 10px;
+            color: #333;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
     {% csrf_token %}
-    <div class="hero">
-        <h1>Welcome to Workout Tracker</h1>
-        <div style="position: absolute; top: 20px; right: 20px;">
-            <a href="{% url 'logout' %}" style="color: #f0f0f0; text-decoration: none; background-color: #333; padding: 8px 16px; border-radius: 4px;">Logout</a>
-        </div>
-    </div>
 
+    <!-- ===== Header ===== -->
+    <header class="site-header">
+    <h1>Portfolio</h1>
+        <nav>
+            <a href="{% url 'home' %}">🏠 Home</a>
+            <a href="{% url 'ai_create_workout' %}">🤖 AI Create Workout</a>
+            <a href="{% url 'create_workout' %}">✍️ Manual Create Workout</a>
+            <a href="{% url 'exercises' %}">📋 Exercise List</a>
+            <a href="{% url 'logout' %}" class="logout">Logout</a>
+        </nav>
+    </header>
+
+    <!-- ===== Main Dashboard ===== -->
     <div class="container">
-        <h2>Today's Nutrition Summary</h2>
-        <p><strong>Total Calories:</strong> {{ total_calories }} Cal</p>
-        <p><strong>Total Protein:</strong> {{ total_protein }} g protein</p>
-        <p><strong>Total Carbs:</strong> {{ total_carbs }} g carbs</p>
-        <p><strong>Total Fats:</strong> {{ total_fats }} g fats</p>
 
-        {% if todays_workouts %}
+        <!-- Nutrition Summary -->
+        <div class="card">
+            <h2>Today's Nutrition Summary</h2>
+            <div class="summary">
+                <div class="summary-item">
+                    <strong>{{ total_calories }}</strong>
+                    Calories
+                </div>
+                <div class="summary-item">
+                    <strong>{{ total_protein }}g</strong>
+                    Protein
+                </div>
+                <div class="summary-item">
+                    <strong>{{ total_carbs }}g</strong>
+                    Carbs
+                </div>
+                <div class="summary-item">
+                    <strong>{{ total_fats }}g</strong>
+                    Fats
+                </div>
+            </div>
+        </div>
+
+        <!-- Workouts -->
+        <div class="card">
             <h2>Today's Workouts ({{ workout_count }})</h2>
-            <div class="workout-list">
-                {% for workout in todays_workouts %}
-                    <div class="workout-item">
-                        <div class="workout-name">{{ workout.name }}</div>
-                        <div class="workout-meta">
-                            Created: {{ workout.created_at|time:"g:i A" }} | 
-                            Exercises: {{ workout.items.count }}
+            <div class="list">
+                {% if todays_workouts %}
+                    {% for workout in todays_workouts %}
+                        <div class="list-item">
+                            <div class="title">{{ workout.name }}</div>
+                            <div class="meta">
+                                Created: {{ workout.created_at|time:"g:i A" }} |
+                                Exercises: {{ workout.items.count }}
+                            </div>
                         </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        <h2>What are we doing today?</h2>
-        
-        <!-- Highlight the NLP feature -->
-        <br>
-        
-        <a href="{% url 'create_workout' %}">Log Workout</a>
-        <a href="{% url 'log_meal_entry' %}">Log Meal</a>
-        <a href="{% url 'calendar' %}">View Calendar</a>
-    </div>
-
-    <div class="container">
-        <!-- AI Workout Assistant Section -->
-        <div class="ai-chatbot-section">
-            <h2 class="ai-title">🤖 AI Workout Assistant</h2>
-            <p class="ai-subtitle">Tell me what workout you want and I'll create it for you instantly!</p>
-            
-            <div class="quick-suggestions">
-                <button class="suggestion-btn" onclick="sendSuggestion('chest and triceps workout with dumbbells')">Chest & Triceps</button>
-                <button class="suggestion-btn" onclick="sendSuggestion('leg day with squats and lunges')">Leg Day</button>
-                <button class="suggestion-btn" onclick="sendSuggestion('back and biceps workout')">Back & Biceps</button>
-                <button class="suggestion-btn" onclick="sendSuggestion('30 minute full body workout')">Full Body</button>
-                <button class="suggestion-btn" onclick="sendSuggestion('core and abs workout')">Core & Abs</button>
-            </div>
-            
-            <div class="chat-container">
-                <div class="chat-messages" id="chat-messages">
-                    <div class="message bot-message">
-                        💪 Hi! I'm your AI workout assistant. Tell me what kind of workout you want to do today!<br>
-                        <small style="color: #888;">Try: "I want a chest workout with dumbbells" or "Give me a 30 minute leg day"</small>
-                    </div>
-                </div>
-                
-                <div class="input-container">
-                    <input type="text" id="workout-input" placeholder="Describe your workout..." maxlength="200">
-                    <button id="send-btn">🚀 Create</button>
-                </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No workouts logged yet.</p>
+                {% endif %}
             </div>
         </div>
+
+        <!-- Meals -->
+        <div class="card">
+            <h2>Today's Meals</h2>
+            <div class="list">
+                {% if todays_meals %}
+                    {% for meal in todays_meals %}
+                        <div class="list-item">
+                            <div>
+                                <div class="title">{{ meal.name }}</div>
+                                <div class="meta">
+                                    Calories: {{ meal.calories }} |
+                                    Protein: {{ meal.protein }}g |
+                                    Carbs: {{ meal.carbs }}g |
+                                    Fats: {{ meal.fats }}g
+                                </div>
+                            </div>
+                            <!-- Delete button -->
+                            <form method="post" action="{% url 'delete_meal_log' meal.id %}" style="margin-top:10px;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('Delete this meal?')">🗑️ Delete</button>
+                            </form>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p>No meals logged yet.</p>
+                {% endif %}
+            </div>
+
+            <!-- Add Meal Form -->
+            <h3 style="margin-top:25px;">➕ Add a Meal</h3>
+            <form method="post" style="margin-bottom:20px;">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-success">Add Meal</button>
+            </form>
+        </div>
+
+        <!-- Tom Platz Section -->
+        <div class="platz-section">
+            <img src="https://www.oldschoollabs.com/wp-content/uploads/2018/03/TomPlatz_PerfectForm.jpg" alt="Tom Platz">
+            <p>“The Quadfather” – Tom Platz, legendary bodybuilder</p>
+        </div>
     </div>
-
-    <script>
-        // Get DOM elements
-        const chatMessages = document.getElementById('chat-messages');
-        const workoutInput = document.getElementById('workout-input');
-        const sendBtn = document.getElementById('send-btn');
-
-        // Add message to chat
-        function addMessage(message, isUser = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = isUser ? 'message user-message' : 'message bot-message';
-            messageDiv.innerHTML = message;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Send workout request to Django backend
-        async function sendWorkoutRequest(input) {
-            try {
-                // Add user message to chat
-                addMessage(`🏋️ "${input}"`, true);
-                
-                // Add loading message
-                const loadingDiv = document.createElement('div');
-                loadingDiv.className = 'message bot-message loading';
-                loadingDiv.innerHTML = '⏳ Creating your workout... This might take a moment!';
-                chatMessages.appendChild(loadingDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-
-                // Get CSRF token
-                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-                // Send request to your Django endpoint
-                const response = await fetch('/api/trigger-workout-agent/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken,
-                    },
-                    body: JSON.stringify({
-                        input: input,
-                        user_id: {{ request.user.id }}  // Django template variable
-                    })
-                });
-
-                const data = await response.json();
-                
-                // Remove loading message
-                chatMessages.removeChild(loadingDiv);
-
-                if (response.ok) {
-                    addMessage(`✅ ${data.message}<br><small>Your workout is being processed and will appear in your workouts list once ready!</small>`);
-                    
-                    // Optionally refresh the page after a delay to show the new workout
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 3000);
-                } else {
-                    addMessage(`❌ Sorry, something went wrong: ${data.error}`);
-                }
-
-            } catch (error) {
-                console.error('Error:', error);
-                // Remove loading message if it exists
-                const loadingMsg = document.querySelector('.loading');
-                if (loadingMsg) {
-                    loadingMsg.remove();
-                }
-                addMessage('❌ Network error. Please check your connection and try again.');
-            }
-        }
-
-        // Handle suggestion buttons
-        function sendSuggestion(suggestion) {
-            workoutInput.value = suggestion;
-            sendWorkoutRequest(suggestion);
-            workoutInput.value = '';
-        }
-
-        // Handle send button click
-        sendBtn.addEventListener('click', () => {
-            const input = workoutInput.value.trim();
-            if (input) {
-                sendWorkoutRequest(input);
-                workoutInput.value = '';
-            }
-        });
-
-        // Handle Enter key press
-        workoutInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const input = workoutInput.value.trim();
-                if (input) {
-                    sendWorkoutRequest(input);
-                    workoutInput.value = '';
-                }
-            }
-        });
-
-        // Focus on input when page loads
-        workoutInput.focus();
-    </script>
 </body>
 </html>

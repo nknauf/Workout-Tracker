@@ -1,12 +1,12 @@
 from django import forms
-from .models import Exercise, Workout, MealEntry, Equipment, MuscleGroup, SavedWorkout
+from .models import Exercise, Workout, MealEntry, Equipment, MuscleGroup
 
 
 class ExerciseForm(forms.ModelForm):
     """Form for creating/editing exercises"""
     class Meta:
         model = Exercise
-        fields = ['name', 'primary_muscle_group', 'secondary_muscle_groups', 'equipment', 'notes']
+        fields = ['name', 'base_exercise', 'equipment']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -76,31 +76,6 @@ class MealEntryForm(forms.ModelForm):
         }
 
 
-
-class SavedWorkoutForm(forms.ModelForm):
-    """Form for creating/editing saved workout templates"""
-    class Meta:
-        model = SavedWorkout
-        fields = ['name', 'description', 'is_favorite']
-        widgets = {
-            'name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Enter template name (e.g., Push Day A)'
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 3,
-                'placeholder': 'Optional description of this workout template...'
-            }),
-            'is_favorite': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
-            }),
-        }
-        labels = {
-            'is_favorite': 'Mark as favorite template',
-        }
-
-
 class ExerciseFilterForm(forms.Form):
     """Form for filtering exercises in workout creation"""
     muscle_group = forms.ModelMultipleChoiceField(
@@ -154,17 +129,6 @@ class WorkoutExerciseForm(forms.Form):
             'style': 'width: 100px;',
             'placeholder': 'Weight',
             'step': '0.5'
-        })
-    )
-    
-    rest_seconds = forms.IntegerField(
-        required=False,
-        min_value=0,
-        max_value=3600,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control form-control-sm',
-            'style': 'width: 100px;',
-            'placeholder': 'Rest (sec)'
         })
     )
 

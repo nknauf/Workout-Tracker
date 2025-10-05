@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     MuscleGroup, Equipment, Exercise, Workout, WorkoutExercise,
-    MealEntry, DailyLog, SavedWorkout, SavedWorkoutExercise
+    MealEntry, DailyLog
 )
 
 class MuscleGroupSerializer(serializers.ModelSerializer):
@@ -180,29 +180,3 @@ class DailyLogSerializer(serializers.ModelSerializer):
 
 # --- Saved Workout Serializers ---
 
-class SavedWorkoutExerciseSerializer(serializers.ModelSerializer):
-    """Convert SavedWorkoutExercise objects to/from JSON"""
-    exercise_name = serializers.CharField(source='exercise.name', read_only=True)
-    
-    class Meta:
-        model = SavedWorkoutExercise
-        fields = [
-            'id', 'exercise', 'exercise_name', 'default_sets', 'default_reps',
-            'default_weight', 'default_rest_seconds', 'notes', 'order'
-        ]
-
-class SavedWorkoutSerializer(serializers.ModelSerializer):
-    """Convert SavedWorkout objects to/from JSON"""
-    saved_exercises = SavedWorkoutExerciseSerializer(many=True, read_only=True)
-    exercise_count = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = SavedWorkout
-        fields = [
-            'id', 'name', 'description', 'is_favorite', 'times_used',
-            'created_at', 'last_used', 'saved_exercises', 'exercise_count'
-        ]
-    
-    def get_exercise_count(self, obj):
-        """Count exercises in saved workout"""
-        return obj.saved_exercises.count()

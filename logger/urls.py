@@ -4,22 +4,10 @@ from . import views
 urlpatterns = [
     # Main pages
     path('', views.home, name='home'),
-    
-    # Exercise management
-    path('create-exercise/', views.create_exercise, name='create_exercise'),
-    path('exercise-list/', views.exercise_list, name='exercise_list'),
-    
-    # Workout management
     path('create-workout/', views.create_workout, name='create_workout'),
-    path('saved-workouts/', views.saved_workouts, name='saved_workouts'),
-    path('delete-workout/<int:workout_id>/', views.delete_workout, name='delete_workout'),
-    
-    # Meal management
-    path('log-meal-entry/', views.log_meal_entry, name='log_meal_entry'),
-    path('delete-meal/<int:meal_id>/', views.delete_meal, name='delete_meal'),
-    
-    # Calendar and daily logs
-    path('calendar/', views.calendar, name='calendar'),
+    path('ai-create-workout/', views.ai_create_workout, name='ai_create_workout'),
+    path('exercises/', views.exercises, name="exercises"),
+    path("delete-meal/<int:meal_id>/", views.delete_meal_log, name="delete_meal_log"),
     
     # API endpoints for n8n integration
     path('api/trigger-workout-agent/', views.trigger_workout_agent, name='trigger_workout_agent'),
