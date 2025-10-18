@@ -338,48 +338,38 @@ def _friend_ids(user):
 # BEGIN: FEED_PAGE_VIEW
 @login_required
 def social_feed(request):
-    """Main feed: your posts + friends' posts, newest first. Also handles quick post create."""
+    """Main feed renders a React mount with pre-fetched posts."""
     friend_ids = _friend_ids(request.user)
     allowed_users = list(friend_ids) + [request.user.id]
-
 
     posts = (
         Post.objects
         .filter(Q(author_id__in=allowed_users) & (Q(visibility="friends") | Q(visibility="public")))
         .select_related("author", "workout", "meal")
-        .prefetch_related("images", "comments__user", "likes")
-        .order_by("-created_at")
+        .prefetch_related(
+            Prefetch("images", queryset=PostImage.objects.order_by("created_at", "id")),
+            Prefetch(
+                "comments",
+                queryset=Comment.objects.select_related("user").order_by("-created_at"),
+            ),
+            "likes",
+        )
+        .order_by("-created_at")[:50]
     )
 
-
-    # Prep liked set for quick lookup
     liked_ids = set(
         PostLike.objects.filter(user=request.user, post__in=posts).values_list("post_id", flat=True)
     )
 
+    posts_payload = json.dumps(_serialize_posts(posts, liked_ids))
 
-    if request.method == "POST":
-        form = PostForm(request.POST, request.FILES, user=request.user)
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
-            post.save()
-            # Save images
-            for img in request.FILES.getlist("images"):
-                PostImage.objects.create(post=post, image=img)
-            messages.success(request, "Post created!")
-            return redirect("social_feed")
-        else:  
-            messages.error(request, "Could not create post. Please fix the errors.")
-    else:
-        form = PostForm(user=request.user)
-
-
-    return render(request, "logger/social/feed.html", {
-        "form": form,
-        "posts": posts,
-        "liked_ids": liked_ids,
-    })
+    return render(
+        request,
+        "logger/social/feed.html",
+        {
+            "posts_payload": posts_payload,
+        },
+    )
 # END: FEED_PAGE_VIEW
 
 @login_required
@@ -493,39 +483,80 @@ def repdeck_view(request):
     return render(request, "logger/social/repdeck.html")
 
 # BEGIN: POSTS_API_VIEW
+
+
+def _serialize_posts(posts, liked_ids):
+    serialized = []
+    for post in posts:
+        image_objs = list(post.images.all())
+        image_objs.sort(key=lambda img: (getattr(img, "order", img.pk), img.pk))
+        images_payload = [
+            {
+                "url": img.image.url,
+                "alt": img.alt_text or None,
+            }
+            for img in image_objs
+        ]
+        first_image = images_payload[0] if images_payload else None
+        media_type = "image" if first_image else "text"
+        serialized.append(
+            {
+                "id": post.id,
+                "author": {"username": post.author.username},
+                "createdAt": post.created_at.isoformat(),
+                "type": media_type,
+                "mediaUrl": first_image["url"] if first_image else None,
+                "images": images_payload,
+                "content": post.content or "",
+                "meal": (
+                    {
+                        "name": post.meal.name,
+                        "protein": post.meal.protein,
+                        "carbs": post.meal.carbs,
+                        "fats": post.meal.fats,
+                    }
+                    if post.meal
+                    else None
+                ),
+                "workout": (
+                    {"name": post.workout.name, "sets": 0, "reps": ""}
+                    if post.workout
+                    else None
+                ),
+                "liked": post.id in liked_ids,
+                "favorited": False,
+                "likeCount": len(post.likes.all()),
+                "comments": [
+                    {
+                        "user": comment.user.username,
+                        "text": comment.content,
+                        "when": comment.created_at.isoformat(),
+                    }
+                    for comment in post.comments.all()[:20]
+                ],
+            }
+        )
+    return serialized
+
+
 @login_required
 def posts_api(request):
     posts = (
-        Post.objects
-        .select_related("author")
-        .prefetch_related("images", "comments__user", "likes")
+        Post.objects.select_related("author", "meal", "workout")
+        .prefetch_related(
+            Prefetch("images", queryset=PostImage.objects.order_by("created_at", "id")),
+            Prefetch(
+                "comments",
+                queryset=Comment.objects.select_related("user").order_by("-created_at"),
+            ),
+            "likes",
+        )
         .order_by("-created_at")[:50]
     )
-    liked_ids = set(PostLike.objects.filter(user=request.user, post__in=posts)
-                    .values_list("post_id", flat=True))
-    out = []
-    for p in posts:
-        first_img = p.images.first()
-        media_type = "image" if first_img else "text"
-        out.append({
-            "id": p.id,
-            "author": {"username": p.author.username},
-            "createdAt": p.created_at.isoformat(),
-            "type": media_type,
-            "mediaUrl": first_img.image.url if first_img else None,
-            "content": p.content or "",
-            "meal": ({"name": p.meal.name, "protein": p.meal.protein,
-                      "carbs": p.meal.carbs, "fats": p.meal.fats}
-                     if p.meal else None),
-            "workout": ({"name": p.workout.name, "sets": 0, "reps": ""}
-                        if p.workout else None),
-            "liked": p.id in liked_ids,
-            "favorited": False,
-            "comments": [
-                {"user": c.user.username, "text": c.content,
-                 "when": c.created_at.isoformat()}
-                for c in p.comments.all()[:20]
-            ],
-        })
-    return JsonResponse(out, safe=False)
+    liked_ids = set(
+        PostLike.objects.filter(user=request.user, post__in=posts).values_list("post_id", flat=True)
+    )
+    return JsonResponse(_serialize_posts(posts, liked_ids), safe=False)
+
+
 # END: POSTS_API_VIEW
