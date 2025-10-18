@@ -2,19 +2,49 @@
 
 {% load humanize %}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Post</title>
+  <title>Post · MoreSore</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body{background:#0d0d0d;color:#f5f5f5;font-family:system-ui;margin:0}
-    .container{max-width:900px;margin:24px auto;padding:0 16px}
+    body { font-family: system-ui, sans-serif; margin: 0; background: #f7f7f7; color: #111; }
+    main { max-width: 720px; margin: 0 auto; padding: 32px 16px; }
+    img { max-width: 100%; height: auto; display: block; border-radius: 12px; }
+    article { background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 6px 24px rgba(0,0,0,0.08); }
+    header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+    .meta { color: #666; font-size: 0.9rem; }
+    footer { margin-top: 24px; font-size: 0.9rem; }
+    footer a { color: #2563eb; text-decoration: none; }
   </style>
 </head>
 <body>
-  <div class="container">
-    {% include "logger/social/_post_card.html" with post=post liked_ids=liked_ids show_comments=True %}
-  </div>
+  <main>
+    <article>
+      <header>
+        <h1>@{{ post.author.username }}</h1>
+        <span class="meta">{{ post.created_at|naturaltime }}</span>
+      </header>
+
+      {% with first=post.images.first %}
+        {% if first %}
+          <figure style="margin: 0 0 20px 0;">
+            <img src="{{ first.image.url }}" alt="{{ first.alt_text|default:'Post image' }}" />
+          </figure>
+        {% endif %}
+      {% endwith %}
+
+      {% if post.content %}
+        <p style="white-space: pre-line; line-height: 1.5;">{{ post.content }}</p>
+      {% endif %}
+
+      <p class="meta" aria-label="Post stats">❤️ {{ post.likes.count }} · 💬 {{ post.comments.count }}</p>
+    </article>
+
+    <footer>
+      <a href="{% url 'social_feed' %}">← Back to RepDeck</a>
+    </footer>
+  </main>
 </body>
 </html>
 {# END: POST_DETAIL #}

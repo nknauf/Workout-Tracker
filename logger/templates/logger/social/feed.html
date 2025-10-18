@@ -5,7 +5,8 @@
 
 {# BEGIN: FEED_MOUNT #}
 {% block content %}
-  <div id="repdeck-root" style="min-height:100vh;"></div>
+  <div id="repdeck-root" class="min-h-screen"></div>
+  <script id="repdeck-data" type="application/json">{{ posts_payload|safe }}</script>
   <script type="module" src="{% static 'repdeck/index.js' %}"></script>
 {% endblock %}
 {# END: FEED_MOUNT #}
