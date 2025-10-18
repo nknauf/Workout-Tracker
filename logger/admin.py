@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     MuscleGroup, Equipment, Exercise, Workout, WorkoutExercise, 
-    MealEntry, DailyLog, BaseExercise, SavedWorkout
+    MealEntry, DailyLog, BaseExercise, SavedWorkout, Follow, UserProfile, Post, PostImage,
+    PostLike, Comment,
 )
 
 @admin.register(MuscleGroup)
@@ -84,3 +85,45 @@ class DailyLogAdmin(admin.ModelAdmin):
     search_fields = ("user__username",)
     list_filter = ("date", "user")
     ordering = ("-date",)
+
+
+class PostImageInline(admin.TabularInline):
+    model = PostImage
+    extra = 1
+
+
+@admin.register(Post)
+class PostAdmin(admin.ModelAdmin):
+    list_display = ("id", "author", "visibility", "created_at")
+    list_filter = ("visibility", "created_at")
+    search_fields = ("author__username", "content")
+    inlines = [PostImageInline]
+
+
+@admin.register(PostImage)
+class PostImageAdmin(admin.ModelAdmin):
+    list_display = ("id", "post", "created_at")
+
+
+@admin.register(PostLike)
+class PostLikeAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "post", "created_at")
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ("id", "post", "user", "created_at")
+    search_fields = ("content", "user__username")
+
+
+@admin.register(Follow)
+class FollowAdmin(admin.ModelAdmin):
+    list_display = ("id", "follower", "following", "created_at")
+    search_fields = ("follower__username", "following__username")
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ("author", "visibility", "created_at")
+    search_fields = ("author__username",)
+

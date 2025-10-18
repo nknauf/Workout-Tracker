@@ -1,5 +1,9 @@
 {
+    "python.defaultInterpreterPath": "venv/Scripts/python.exe",
     "python.analysis.extraPaths": [
-        "./workout-tracker"
-    ]
+        "./workout-tracker", "logger"
+    ],
+    "css.validate": false,
+    "scss.validate": false,
+    "less.validate": false
 }

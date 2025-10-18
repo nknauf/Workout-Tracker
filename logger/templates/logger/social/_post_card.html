@@ -1,0 +1,58 @@
+{# BEGIN: POST_CARD #}
+{% load humanize %}
+<div class="card">
+  <div class="card-header">
+    <a class="author" href="{% url 'profile' post.author.username %}">@{{ post.author.username }}</a>
+    <span class="dot">•</span>
+    <span class="time">{{ post.created_at|naturaltime }}</span>
+  </div>
+
+  {% if post.content %}
+    <div class="content">{{ post.content|linebreaksbr }}</div>
+  {% endif %}
+
+  {% if post.workout %}
+    <div class="attach">🏋️ Attached workout: <strong>{{ post.workout.name }}</strong> ({{ post.workout.date }})</div>
+  {% endif %}
+  {% if post.meal %}
+    <div class="attach">🍽️ Attached meal: <strong>{{ post.meal.name }}</strong> ({{ post.meal.calories }} cal)</div>
+  {% endif %}
+
+  {% if post.images.all %}
+    <div class="images">
+      {% for img in post.images.all %}
+        <img src="{{ img.image.url }}" alt="{{ img.alt_text|default:'image' }}" />
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="actions" data-post-id="{{ post.id }}">
+    <button class="like-btn" data-liked="{% if liked_ids and post.id in liked_ids %}true{% else %}false{% endif %}">
+      <span class="heart">{% if post.id in liked_ids %}♥{% else %}♡{% endif %}</span>
+      <span class="count">{{ post.like_count }}</span>
+    </button>
+    <a class="comment-link" href="{% url 'post_detail' post.id %}">💬 {{ post.comments.count }} comments</a>
+  </div>
+
+  {% if show_comments %}
+  <div class="comments">
+    {% for c in post.comments.all %}
+      <div class="comment">
+        <a class="author" href="{% url 'profile' c.user.username %}">@{{ c.user.username }}</a>
+        <span class="msg">{{ c.content }}</span>
+        <span class="time">· {{ c.created_at|naturaltime }}</span>
+      </div>
+    {% empty %}
+      <div class="comment empty">Be the first to comment!</div>
+    {% endfor %}
+
+    <form action="{% url 'add_comment' post.id %}" method="post" class="comment-form">
+      {% csrf_token %}
+      <textarea name="content" rows="2" placeholder="Write a comment..."></textarea>
+      <button type="submit">Post</button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+"""
+{# END: POST_CARD #}

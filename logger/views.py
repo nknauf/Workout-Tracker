@@ -1,10 +1,15 @@
+
+# BEGIN: IMPORTS
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils.dateparse import parse_date
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseBadRequest
 from django.views.decorators.csrf import csrf_exempt
 from datetime import date
+from django.views.decorators.http import require_POST
+from django.db.models import Q, Prefetch
+from django.utils.timesince import timesince
 import json
 import requests
 import logging
@@ -15,57 +20,49 @@ from django.contrib.auth.models import User
 
 from .models import (
     MuscleGroup, Equipment, Exercise, Workout, WorkoutExercise, 
-    MealEntry, DailyLog, BaseExercise
+    MealEntry, DailyLog, BaseExercise, Post, PostImage, PostLike, Comment,
+    Follow, UserProfile
 )
-from .forms import MealEntryForm
+from .forms import MealEntryForm, PostForm, CommentForm
 from .serializers import WorkoutSerializer, AIWorkoutCreateSerializer
+# END: IMPORTS
 
-
+# BEGIN: HOME_PAGE_VIEW
 @login_required
 def home(request):
-    """Dashboard showing today's activities and meal logging"""
-    today = date.today()
+    return render(request, "home.html")
+# END: HOME_PAGE_VIEW
 
-    # Get or create today's log
-    daily_log, created = DailyLog.objects.get_or_create(user=request.user, date=today)
+# BEGIN: PROFILE_PAGE_VIEW
+@login_required                                                          #-------------- need to implement vvv
+def profile(request, username):
+    return render(request, "logger/profile.html", {"username": username})
+# END: PROFILE_PAGE_VIEW
 
-    # Handle meal form submission
-    if request.method == 'POST':
-        form = MealEntryForm(request.POST)
-        if form.is_valid():
-            meal = form.save(commit=False)
-            meal.user = request.user
-            meal.date = today
-            meal.save()
+# BEGIN: AGENT_PAGE_VIEW
+@login_required
+def agent(request):
+    return render(request, "logger/agent.html")
+# END: AGENT_PAGE_VIEW
 
-            daily_log.meals.add(meal)
-            daily_log.total_calories += meal.calories
-            daily_log.total_carbs += meal.carbs
-            daily_log.total_fats += meal.fats
-            daily_log.total_protein += meal.protein
+# BEGIN: PROGRESS_PAGE_VIEW
+@login_required
+def progress(request):
+    return render(request, "logger/progress.html") #-------------------------------------------------------
+# END: PROGRESS_PAGE_VIEW
 
-            messages.success(request, f"Meal '{meal.name}' logged successfully!")
-            return redirect('home')
-    else:
-        form = MealEntryForm()
-
-    # Data for dashboard
-    todays_workouts = daily_log.workouts.all()
-    todays_meals = daily_log.meals.all().order_by('-created_at')
-
-    context = {
-        'form': form,
-        'todays_workouts': todays_workouts,
-        'workout_count': todays_workouts.count(),
-        'todays_meals': todays_meals,
-        'total_calories': daily_log.total_calories,
-        'total_protein': daily_log.total_protein,
-        'total_carbs': daily_log.total_carbs,
-        'total_fats': daily_log.total_fats,
-        'date': today,
+# BEGIN: DAILY_TODAY_VIEW
+@login_required
+def daily_today(request):
+    # minimal stub; real data later
+    out = {
+        "todayWorkouts": [],
+        "todayMeals": [],
+        "todayTotals": {"calories": 0, "protein": 0, "carbs": 0, "fats": 0},
+        "pumpPics": []
     }
-    return render(request, 'logger/home.html', context)
-
+    return JsonResponse(out)
+# END: DAILY_TODAY_VIEW
 
 def create_workout(request):
     """For manually creating a workout without the help of n8n"""
@@ -330,3 +327,205 @@ def get_recent_workouts(request):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, 
                       status=status.HTTP_404_NOT_FOUND)
+    
+
+def _friend_ids(user):
+    try:
+        return user.profile.friend_ids()
+    except:
+        return set()
+    
+# BEGIN: FEED_PAGE_VIEW
+@login_required
+def social_feed(request):
+    """Main feed: your posts + friends' posts, newest first. Also handles quick post create."""
+    friend_ids = _friend_ids(request.user)
+    allowed_users = list(friend_ids) + [request.user.id]
+
+
+    posts = (
+        Post.objects
+        .filter(Q(author_id__in=allowed_users) & (Q(visibility="friends") | Q(visibility="public")))
+        .select_related("author", "workout", "meal")
+        .prefetch_related("images", "comments__user", "likes")
+        .order_by("-created_at")
+    )
+
+
+    # Prep liked set for quick lookup
+    liked_ids = set(
+        PostLike.objects.filter(user=request.user, post__in=posts).values_list("post_id", flat=True)
+    )
+
+
+    if request.method == "POST":
+        form = PostForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.save()
+            # Save images
+            for img in request.FILES.getlist("images"):
+                PostImage.objects.create(post=post, image=img)
+            messages.success(request, "Post created!")
+            return redirect("social_feed")
+        else:  
+            messages.error(request, "Could not create post. Please fix the errors.")
+    else:
+        form = PostForm(user=request.user)
+
+
+    return render(request, "logger/social/feed.html", {
+        "form": form,
+        "posts": posts,
+        "liked_ids": liked_ids,
+    })
+# END: FEED_PAGE_VIEW
+
+@login_required
+def create_post(request):
+    if request.method == "POST":
+        form = PostForm(request.POST, request.FILES, user=request.user)
+        if form.is_valid():
+            post = form.save(commit=False)
+            post.author = request.user
+            post.save()
+            for img in request.FILES.getlist("images"):
+                PostImage.objects.create(post=post, image=img)
+            messages.success(request, "Post created!")
+            return redirect("post_detail", pk=post.pk)
+    else:
+        form = PostForm(user=request.user)
+    return render(request, "logger/social/post_form.html", {"form": form})
+
+
+@login_required
+def post_detail(request, pk):
+    post = get_object_or_404(Post.objects.select_related("author").prefetch_related("images", "comments__user"), pk=pk)
+
+    # Permissions: only allow viewing friends-only posts by friends
+    if post.visibility == "friends" and post.author_id not in _friend_ids(request.user) and post.author != request.user:
+        messages.error(request, "This post is only visible to friends.")
+        return redirect("social_feed")
+
+
+    comment_form = CommentForm()
+    liked = PostLike.objects.filter(user=request.user, post=post).exists()
+
+
+    return render(request, "logger/social/post_detail.html", {
+        "post": post,
+        "comment_form": comment_form,
+        "liked": liked,
+    })
+
+# BEGIN: TOGGLE_LIKE_VIEW
+@require_POST
+@login_required
+def toggle_like(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    like, created = PostLike.objects.get_or_create(user=request.user, post=post)
+    if not created:
+        like.delete()
+        liked = False
+    else:
+        liked = True
+    return JsonResponse({"liked": liked, "count": post.likes.count()})
+# END: TOGGLE_LIKE_VIEW
+
+# BEGIN: ADD_COMMENT_VIEW
+@require_POST
+@login_required
+def add_comment(request, pk):
+    post = get_object_or_404(Post, pk=pk)
+    form = CommentForm(request.POST)
+    if form.is_valid():
+        Comment.objects.create(post=post, user=request.user, content=form.cleaned_data["content"])
+    else:
+        messages.error(request, "Could not add comment.")
+    return redirect(request.META.get("HTTP_REFERER", "post_detail", pk))
+# END: ADD_COMMENT_VIEW
+
+@login_required
+def profile(request, username):
+    target = get_object_or_404(User, username=username)
+    posts_qs = (
+        Post.objects.filter(author=target)
+        .select_related("author").prefetch_related("images", "comments__user", "likes")
+        .order_by("-created_at")
+    )
+    # Hide friends-only posts if not friends
+    is_self = (target == request.user)
+    is_friend = target.id in _friend_ids(request.user)
+    if not (is_self or is_friend):
+        posts_qs = posts_qs.filter(visibility="public")
+
+
+    you_follow = Follow.objects.filter(follower=request.user, following=target).exists() if request.user.is_authenticated else False
+    they_follow = Follow.objects.filter(follower=target, following=request.user).exists() if request.user.is_authenticated else False
+
+
+    return render(request, "logger/social/profile.html", {
+        "target": target,
+        "posts": posts_qs,
+        "you_follow": you_follow,
+        "they_follow": they_follow,
+        "is_friend": (you_follow and they_follow),
+    })
+
+@require_POST
+@login_required
+def toggle_follow(request, username):
+    target = get_object_or_404(User, username=username)
+    if target == request.user:
+        return HttpResponseBadRequest("Cannot follow yourself.")
+    rel, created = Follow.objects.get_or_create(follower=request.user, following=target)
+    if not created:
+        rel.delete()
+        state = "unfollowed"
+    else:
+        state = "followed"
+    return JsonResponse({"state": state})
+
+
+@login_required
+def repdeck_view(request):
+    return render(request, "logger/social/repdeck.html")
+
+# BEGIN: POSTS_API_VIEW
+@login_required
+def posts_api(request):
+    posts = (
+        Post.objects
+        .select_related("author")
+        .prefetch_related("images", "comments__user", "likes")
+        .order_by("-created_at")[:50]
+    )
+    liked_ids = set(PostLike.objects.filter(user=request.user, post__in=posts)
+                    .values_list("post_id", flat=True))
+    out = []
+    for p in posts:
+        first_img = p.images.first()
+        media_type = "image" if first_img else "text"
+        out.append({
+            "id": p.id,
+            "author": {"username": p.author.username},
+            "createdAt": p.created_at.isoformat(),
+            "type": media_type,
+            "mediaUrl": first_img.image.url if first_img else None,
+            "content": p.content or "",
+            "meal": ({"name": p.meal.name, "protein": p.meal.protein,
+                      "carbs": p.meal.carbs, "fats": p.meal.fats}
+                     if p.meal else None),
+            "workout": ({"name": p.workout.name, "sets": 0, "reps": ""}
+                        if p.workout else None),
+            "liked": p.id in liked_ids,
+            "favorited": False,
+            "comments": [
+                {"user": c.user.username, "text": c.content,
+                 "when": c.created_at.isoformat()}
+                for c in p.comments.all()[:20]
+            ],
+        })
+    return JsonResponse(out, safe=False)
+# END: POSTS_API_VIEW

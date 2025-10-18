@@ -1,0 +1,25 @@
+# File: templates/logger/social/post_form.html
+POST_FORM_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Create Post</title>
+</head>
+<body style="background:#0d0d0d;color:#fff;font-family:system-ui;margin:0">
+  <div style="max-width:800px;margin:24px auto;padding:0 16px">
+    <h1>Create Post</h1>
+    {# BEGIN: POST_FORM #}
+    <form method="post" enctype="multipart/form-data" style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:12px;padding:14px">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <label>Images</label>
+      <input type="file" name="images" multiple>
+      <br/><br/>
+      <button type="submit" style="background:#fff;color:#000;border:none;padding:8px 14px;border-radius:10px;font-weight:600">Post</button>
+    </form>
+    {# END: POST_FORM #}
+  </div>
+</body>
+</html>
+"""

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Exercise, Workout, MealEntry, Equipment, MuscleGroup
+from .models import Exercise, Workout, MealEntry, Equipment, MuscleGroup, Post, Comment
 
 
 class ExerciseForm(forms.ModelForm):
@@ -211,3 +211,48 @@ class QuickMealForm(forms.Form):
             'class': 'form-control'
         })
     )
+
+class MultiFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+class PostForm(forms.ModelForm):
+
+    images = forms.ImageField(
+        required=False,
+        widget=MultiFileInput(attrs={"multiple": True})
+    )
+
+    class Meta:
+        model = Post
+        fields = ["content", "workout", "meal", "visibility", "images"]
+        widgets = {
+            "content": forms.Textarea(attrs={
+            "rows": 3,
+            "placeholder": "Share your lift, meal, or thought...",
+            "class": "form-control",
+            }),
+            "visibility": forms.Select(attrs={"class": "form-select"}),
+            "images": MultiFileInput(attrs={"multiple": True})
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        super().__init__(*args, **kwargs)
+        # Limit to the current user's recent items (optional & safe if None)
+        if user is not None:
+            self.fields["workout"].queryset = Workout.objects.filter(user=user).order_by("-date")[:20]
+            self.fields["meal"].queryset = MealEntry.objects.filter(user=user).order_by("-date")[:50]
+
+
+class CommentForm(forms.ModelForm):
+    class Meta:
+        model = Comment
+        fields = ["content"]
+        widgets = {
+        "content": forms.Textarea(attrs={
+        "rows": 2,
+        "placeholder": "Write a comment...",
+        "class": "form-control",
+    })
+}
+    

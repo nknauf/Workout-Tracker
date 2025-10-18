@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Feed · MoreSore{% endblock %}
+
+{# BEGIN: FEED_MOUNT #}
+{% block content %}
+  <div id="repdeck-root" style="min-height:100vh;"></div>
+  <script type="module" src="{% static 'repdeck/index.js' %}"></script>
+{% endblock %}
+{# END: FEED_MOUNT #}
